@@ -1360,7 +1360,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
   function criarMapa() {
     if (mapaL) return;
     mapaL = L.map(mapaFrame).setView([mapaPonto.lat, mapaPonto.lng], 18);
-    L.tileLayer(MAPA_BASE, { minZoom: 11, maxZoom: 21, maxNativeZoom: 20, attribution: "CM Lisboa" }).addTo(mapaL);
+    const camada = L.tileLayer(MAPA_BASE, { minZoom: 11, maxZoom: 21, maxNativeZoom: 20, attribution: "CM Lisboa" }).addTo(mapaL);
+    // Um quadrado que falha fica cinzento até se mudar o zoom (o Leaflet não o volta a pedir, nem ao arrastar o mapa):
+    // pede-se outra vez, até 3 vezes, cada vez com mais espera
+    camada.on("tileerror", ({ tile, coords }) => {
+      const n = (Number(tile.dataset.tentativas) || 0) + 1;
+      if (n > 3) { console.warn("[Moradas 112] mapa: quadrado sem resposta depois de 3 tentativas", coords); return; }
+      tile.dataset.tentativas = n;
+      setTimeout(() => { if (tile.isConnected) tile.src = camada.getTileUrl(coords) + "?tentativa=" + n; }, 700 * n);
+    });
     pino = L.marker([mapaPonto.lat, mapaPonto.lng], {
       draggable: true, autoPan: true, keyboard: false, title: "Arrasta para acertar o local",
       icon: L.divIcon({ className: "pino", html: PINO_SVG, iconSize: [30, 45], iconAnchor: [15, 45] })
