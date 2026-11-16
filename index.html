@@ -1035,6 +1035,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
     });
   }
 
+  // começou a escrever-se: o script lê já a folha de viaturas, a lista de ocorrências e o resto que os carros precisam,
+  // para não esperarem pelo quartel. No máximo uma vez a cada 15 segundos (o script guarda as leituras 30 segundos; com a
+  // sessão do Google ou do rsbGO expirada a leitura falha e não fica guardada, e assim não se repete a cada tecla);
+  // um script antigo responde "pedido desconhecido", que se ignora
+  let aquecidoEm = 0;
+  function aquecer() {
+    if (Date.now() - aquecidoEm < 15000) return;
+    aquecidoEm = Date.now();
+    q112("aquecer", null, 3000).catch(() => {});
+  }
+
   // a mesma porta/rua aparece em vários números; guarda as áreas por edifício/rua
   const cacheAreas = new Map();
   function areas(c) {
@@ -1806,6 +1817,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     // o texto mudou: o ponto mostrado já não é o desta morada até a pesquisa nova acabar
     ponto = null;
     botaoGoMAP.disabled = true;
+    aquecer();
     clearTimeout(tPesquisa); tPesquisa = setTimeout(pesquisar, 300);
   });
   caixa.addEventListener("keydown", e => {
@@ -2339,6 +2351,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       caixa.dispatchEvent(new Event("input"));
     }
     notas.addEventListener("input", () => {
+      aquecer(); // a chamada começou: a morada e os carros vêm a seguir
       gravarAtual(); desenhar();
       clearTimeout(tAuto); tAuto = setTimeout(moradaParaPesquisa, 700);
     });
