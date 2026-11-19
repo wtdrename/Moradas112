@@ -15,12 +15,36 @@ const regrasDasNotas = base => REGRAS_NOTAS.filter(r => r.re.test(base));
 // texto sem acentos e em minúsculas, com o mesmo comprimento do original (para recortar o original nas mesmas posições)
 const notasBase = s => s.replace(/[\s\S]/g, c => c.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().charAt(0) || c);
 
-// ---------- auto-completar das notas: ao escrever o início de uma destas, aparece por baixo do cursor (Tab põe, Esc esconde) ----------
-// Para uma sugestão nova basta acrescentar à lista, escrita como deve ficar nas notas (com acentos); compara-se sem acentos
-// nem maiúsculas. Se duas começarem da mesma maneira, aparece a primeira da lista.
-const SUGESTOES_NOTAS = [
-  "cheiros", "fumos", "acidente rodoviário"
+// ---------- naturezas: palavras nas notas que dão a natureza da ocorrência (o código do goMAP) ----------
+// Para uma natureza nova basta acrescentar uma linha. As palavras escrevem-se como devem ficar nas notas (com acentos):
+// a deteção compara sem acentos nem maiúsculas, e as mesmas palavras aparecem no auto-completar.
+// A ordem é a prioridade: com várias nas notas, todas aparecem no painel, mas a que vai para o goMAP é a primeira desta lista
+// (por isso as mais específicas vêm antes: "acidente rodoviário com encarcerados" é Encarcerados, "cheiro a gás" é Fuga de gás).
+// "fonte" (o texto da opção do goMAP, que vai com a natureza) é opcional, como nas regras de cima.
+const NATUREZAS_NOTAS = [
+  { codigo: "2103", nome: "Encarcerados", palavras: ["encarcerados", "encarcerado", "encarcerada"] },
+  { codigo: "2101", nome: "Atropelamento", palavras: ["atropelamento", "atropelado", "atropelada"] },
+  { codigo: "2102", nome: "Acidente rodoviário", palavras: ["acidente rodoviário"] },
+  { codigo: "6301", nome: "Fuga de gás", palavras: ["fuga de gás", "gás"] },
+  { codigo: "6401", nome: "Verificar fumos", palavras: ["fumos", "fumo", "verificar fumos"] },
+  { codigo: "6402", nome: "Verificar cheiros", palavras: ["cheiros", "cheiro", "verificar cheiros"] },
+  { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta socorro", "porta com socorro"] },
+  { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"] },
+  { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"] },
+  { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"] }
 ];
+// a palavra inteira (não "gas" dentro de "lisboagas"), com qualquer espaço entre as palavras
+const reNatureza = p => new RegExp("(?<![a-z0-9])" + notasBase(p).replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&").replace(/ /g, "\\s+") + "(?![a-z0-9])", "g");
+NATUREZAS_NOTAS.forEach(n => n.res = n.palavras.map(reNatureza));
+// "sem encarcerados", "não há cheiro", "nem fumo": a palavra negada não conta
+const RE_NEGA = /(?:^|[^a-z0-9])(?:sem|nao|nem)(?:\s+(?:ha|tem|existem?|se nota|se ve))?\s+$/;
+const naturezaNasNotas = (base, n) => n.res.some(re => [...base.matchAll(re)].some(m => !RE_NEGA.test(base.slice(Math.max(0, m.index - 20), m.index))));
+
+// ---------- auto-completar das notas: ao escrever o início de uma destas, aparece por baixo do cursor (Tab põe, Esc esconde) ----------
+// As palavras das naturezas (de cima) e as de SUGESTOES_NOTAS, outras palavras sem natureza: basta acrescentar à lista,
+// escritas como devem ficar nas notas. Compara-se sem acentos nem maiúsculas; se duas começarem da mesma maneira, aparece a primeira.
+const SUGESTOES_NOTAS = [];
+const PALAVRAS_SUGERIDAS = [...NATUREZAS_NOTAS.flatMap(n => n.palavras), ...SUGESTOES_NOTAS];
 // a sugestão para o texto antes do cursor: { ini, palavra }, ou null. Conta o fim da linha a partir do início de uma palavra
 // (com 3 letras pelo menos), do mais comprido para o mais curto: "acidente ro" sugere "acidente rodoviário"
 function sugestaoNotas(antes) {
@@ -30,7 +54,7 @@ function sugestaoNotas(antes) {
   for (let i = 0; i <= base.length - 3; i++) {
     if (i && /[a-z0-9]/.test(base[i - 1])) continue;
     const fim = base.slice(i);
-    const palavra = SUGESTOES_NOTAS.find(s => { const b = notasBase(s); return b.length > fim.length && b.startsWith(fim); });
+    const palavra = PALAVRAS_SUGERIDAS.find(s => { const b = notasBase(s); return b.length > fim.length && b.startsWith(fim); });
     if (palavra) return { ini: antes.length - linha.length + i, palavra };
   }
   return null;
@@ -50,7 +74,7 @@ const RE_NOME = /(?:^|[^a-z])(sr|sra|snr|snra|senhor|senhora|dona|d\.|nome|recla
 const NAO_NOME = new Set(["diz", "que", "refere", "informa", "liga", "ligou", "esta", "estao", "tem", "ha", "tlm", "tel", "telefone",
   "contacto", "no", "na", "nos", "nas", "em", "com", "e", "para", "porque", "mas", "ja", "nao", "sim", "do", "o", "a", "os", "as", "vizinho", "vizinha"]);
 const LIGA_NOME = new Set(["de", "da", "do", "dos", "das", "e"]);
-const RE_LOCAL = /\b(\d{1,2}\s*[ºo°]?\s*(?:andar|piso)|r\/c|rc|res[\s-]do[\s-]chao|cave|sotao|\d{1,2}\s*[ºo°]?\s*(?:esq|dto|dt|drt|frt|frente)[a-z]*\.?|lote\s+[a-z0-9]+|porta\s+[a-z0-9]+|bloco\s+[a-z0-9]+|apartamento\s+[a-z0-9]+)(?![a-z0-9])/g;
+const RE_LOCAL = /\b(\d{1,2}\s*[ºo°]?\s*(?:andar|piso)|r\/c|rc|res[\s-]do[\s-]chao|cave|sotao|\d{1,2}\s*[ºo°]?\s*(?:esq|dto|dt|drt|frt|frente)[a-z]*\.?|lote\s+[a-z0-9]+|porta\s+(?!(?:socorro|sem|com)(?![a-z0-9])|[cs]\/)[a-z0-9]+|bloco\s+[a-z0-9]+|apartamento\s+[a-z0-9]+)(?![a-z0-9])/g;
 const RE_ALERTA = /\b(ferid[oa]s?|encarcerad[oa]s?|pres[oa]s?|fumo|gas|chamas?|fogo|explos[a-z]*|crianc[a-z]*|bebes?|idos[oa]s?|acamad[oa]s?|inconscien[a-z]*|nao respira|sangue|queda|vitimas?|mort[oa]s?|inalac[a-z]*|elevador|cheiro)\b/g;
 const RE_RUA = /(?:^|[^a-z])((?:rua|r\.|avenida|av\.?|avda|travessa|trav\.?|tv\.?|calcada|largo|lg\.?|praca|pca|estrada|beco|alameda|praceta|azinhaga|bairro|quinta|escadinhas|escadas)\s+[^\n,;:]+)/g;
 const FIM_RUA = new Set(["diz", "que", "ha", "onde", "perto", "junto", "ao", "esquina", "frente", "tel", "tlm", "telefone", "psp", "inem",
@@ -162,6 +186,9 @@ function detetarNotas(texto) {
   for (const g of regrasDasNotas(base)) {
     if (g.morada && !r.ruas.includes(g.morada)) r.ruas.push(g.morada);
     if (g.natureza) r.naturezas.push({ codigo: g.natureza, nome: g.nome, fonte: g.fonte || "" });
+  }
+  for (const n of NATUREZAS_NOTAS) {
+    if (!r.naturezas.some(x => x.codigo === n.codigo) && naturezaNasNotas(base, n)) r.naturezas.push({ codigo: n.codigo, nome: n.nome, fonte: n.fonte || "" });
   }
   return r;
 }
@@ -382,7 +409,7 @@ function dadosParaGoMAP() {
     secao("Numeração outras entidades", d.codu, (el, n) => botao(el, "CODU:" + n, "Pôr nas Ref. entidades do goMAP (sem formulário aberto, copia)", () => paraGoMAP([["oco_ref_entidades", "CODU:" + n]], "CODU:" + n, "CODU")));
     secao("Natureza", d.naturezas, (el, n) => {
       botao(el, n.codigo, "Pôr a natureza no formulário do goMAP (substitui; sem formulário aberto, copia)", () => paraGoMAP([], n.codigo, "Natureza", n));
-      span(el, n.nome, "tipo");
+      span(el, n.nome + (d.naturezas.length > 1 && n === d.naturezas[0] ? " · vai para o goMAP" : ""), "tipo");
     });
     secao("Nome", d.nomes, (el, n) => botao(el, n, "Pôr no Nome do formulário do goMAP (sem formulário aberto, copia)", () => paraGoMAP([["oco_nome", n.slice(0, 50)]], n, "Nome")));
     secao("Morada referida", d.ruas, (el, rua) => {
