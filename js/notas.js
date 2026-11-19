@@ -38,9 +38,10 @@ const NATUREZAS_NOTAS = [
   { codigo: "3100", nome: "Queda de árvore", palavras: ["queda de árvore", "queda árvore", "árvore caída"], fonte: "PUB" },
   { codigo: "3301", nome: "Queda de revestimento", palavras: ["queda de revestimento", "queda revestimento"], fonte: "PUB" },
   { codigo: "7201", nome: "Sinalizar buraco", palavras: ["sinalizar buraco", "buraco"], fonte: "PUB" },
-  { codigo: "1300", nome: "Incêndio inculto", palavras: ["incêndio inculto", "incêndio em inculto"] },
-  { codigo: "1401", nome: "Incêndio habitação", palavras: ["incêndio habitação", "incêndio em habitação"] },
-  { codigo: "1701", nome: "Incêndio rodoviário", palavras: ["incêndio rodoviário", "incêndio viatura", "incêndio em viatura", "incêndio de viatura"] }
+  { codigo: "1300", nome: "Incêndio inculto", palavras: ["incêndio inculto", "incêndio em inculto", "fogo inculto", "fogo em inculto"] },
+  { codigo: "1401", nome: "Incêndio habitação", palavras: ["incêndio habitação", "incêndio em habitação", "fogo habitação", "fogo em habitação"] },
+  { codigo: "1701", nome: "Incêndio rodoviário", palavras: ["incêndio rodoviário", "incêndio viatura", "incêndio em viatura", "incêndio de viatura",
+    "fogo rodoviário", "fogo viatura", "fogo em viatura", "fogo de viatura"] }
 ];
 // a palavra inteira (não "gas" dentro de "lisboagas"), com qualquer espaço entre as palavras
 const reNatureza = p => new RegExp("(?<![a-z0-9])" + notasBase(p).replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&").replace(/ /g, "\\s+") + "(?![a-z0-9])", "g");
