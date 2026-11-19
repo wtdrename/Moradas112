@@ -9,8 +9,8 @@ const REGRAS_NOTAS = [
 const regrasDasNotas = base => REGRAS_NOTAS.filter(r => r.re.test(base));
 // ---------- notas da chamada: escreve-se à vontade, como no bloco de notas, e a página deteta
 // telefones, nomes, entidades, ruas, andar/porta e palavras de alerta ----------
-// Os dados são pessoais: ficam neste browser (localStorage) e num ficheiro deste PC (servidor.ps1, em
-// %LOCALAPPDATA%\Moradas112\notas-112.json), e apagam-se ao fim de 24 horas.
+// Os dados são pessoais: ficam só neste browser (localStorage), nunca saem do PC,
+// e apagam-se ao fim de 12 horas ou no botão "Apagar notas".
 
 // texto sem acentos e em minúsculas, com o mesmo comprimento do original (para recortar o original nas mesmas posições)
 const notasBase = s => s.replace(/[\s\S]/g, c => c.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().charAt(0) || c);
@@ -322,8 +322,8 @@ function dadosParaGoMAP() {
   const estadoN = document.getElementById("notasEstado"), lista = document.getElementById("notasHistorico");
   const VALIDADE = 12 * 3600e3; // chamada vista na Finesse
 
-  // ---- todas as notas das últimas 24 horas: [{ id, inicio, quando, texto }]; a aberta é a do id atualId ----
-  const HIST = "notas112.historico", ATUAL = "notas112.atual", GUARDA = 24 * 3600e3;
+  // ---- todas as notas das últimas 12 horas (um turno): [{ id, inicio, quando, texto }]; a aberta é a do id atualId ----
+  const HIST = "notas112.historico", ATUAL = "notas112.atual", APAGADAS = "notas112.apagadas", GUARDA = 12 * 3600e3;
   const novoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const validas = h => (Array.isArray(h) ? h : []).filter(n => n && n.id && typeof n.texto === "string" && n.texto.trim() && Date.now() - n.quando < GUARDA);
   const lerLS = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
@@ -346,7 +346,9 @@ function dadosParaGoMAP() {
     gravarLS(HIST, historico); gravarLS(ATUAL, atualId);
   }
   // noutro separador da Moradas 112 mudaram as notas: fica com as de lá, menos a que está aberta aqui
+  // (com "Apagar notas" noutro separador, este apaga também a que tem aberta)
   window.addEventListener("storage", e => {
+    if (e.key === APAGADAS && e.newValue) { limparTudo(); return; }
     if (e.key !== HIST) return;
     const aqui = historico.find(n => n.id === atualId);
     historico = validas(lerLS(HIST)).filter(n => n.id !== atualId).concat(aqui ? [aqui] : []);
@@ -364,7 +366,7 @@ function dadosParaGoMAP() {
   function preencherLista() {
     const outras = historico.filter(n => n.id !== atualId).sort((a, b) => b.inicio - a.inicio);
     lista.hidden = !outras.length;
-    lista.replaceChildren(new Option(`🕘 Notas anteriores (${outras.length}) — últimas 24 horas`, ""), ...outras.map(n => new Option(etiqueta(n), n.id)));
+    lista.replaceChildren(new Option(`🕘 Notas anteriores (${outras.length}) — últimas 12 horas`, ""), ...outras.map(n => new Option(etiqueta(n), n.id)));
   }
   let tEstado;
   const avisar = msg => { estadoN.textContent = msg; clearTimeout(tEstado); tEstado = setTimeout(() => estadoN.textContent = "", 2500); };
@@ -449,9 +451,22 @@ function dadosParaGoMAP() {
   lista.onchange = () => { const id = lista.value; lista.value = ""; if (id) abrirNota(id); };
 
   notas.value = (historico.find(n => n.id === atualId) || { texto: "" }).texto;
-  guardar(); // tira as de há mais de 24 horas
+  guardar(); // tira as de há mais de 12 horas
   preencherLista();
   desenhar();
+  // com a página sempre aberta, as notas antigas também saem (de 5 em 5 minutos); a aberta só sai se ninguém lhe
+  // mexer há mais de 12 horas
+  setInterval(() => {
+    guardar();
+    if (notas.value.trim() && !historico.some(n => n.id === atualId)) { notas.value = ""; atualId = novoId(); desenhar(); }
+    preencherLista();
+  }, 5 * 60e3);
+  // "Apagar notas" (troca de turno): todas as notas deste browser, a aberta incluída, também nos outros separadores
+  function limparTudo() {
+    historico = []; atualId = novoId();
+    guardar();
+    notas.value = ""; moradaAuto = ""; desenhar(); preencherLista();
+  }
   // a morada detetada nas notas vai logo para a caixa de pesquisa (0,7 s depois de parar de escrever, para não
   // pesquisar uma rua a meio, nem "heli" a meio de "helicóptero"). O cursor fica nas notas.
   let moradaAuto = "", tAuto;
@@ -499,6 +514,14 @@ function dadosParaGoMAP() {
     if (!notas.value.trim()) { notas.focus(); return; } // já está vazia
     gravarAtual(); atualId = novoId(); guardar();
     notas.value = ""; desenhar(); preencherLista(); notas.focus(); moradaAuto = "";
+  };
+  document.getElementById("notasApagar").onclick = () => {
+    if (!notas.value.trim() && !historico.length) { avisar("Não há notas para apagar."); return; }
+    if (!confirm("Apagar TODAS as notas deste PC (a aberta e as anteriores)? Não dá para desfazer.")) return;
+    limparTudo();
+    gravarLS(APAGADAS, Date.now()); // avisa os outros separadores
+    avisar("Notas apagadas.");
+    notas.focus();
   };
 
   // ---- auto-completar (sugestaoNotas): as sugestões aparecem por baixo do cursor; ↑↓ escolhem, Tab ou clique põe, Esc esconde ----

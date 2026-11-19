@@ -9,7 +9,7 @@
 <script>try { const t = localStorage.getItem("moradasTema"); if (t) document.documentElement.dataset.tema = t; } catch {}</script>
 <!-- Leaflet 1.9.4 -->
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="css/estilos.css?v=20261119d">
+<link rel="stylesheet" href="css/estilos.css?v=20261119e">
 </head>
 <body>
 <main>
@@ -45,8 +45,9 @@
       <button id="notasGoMAP" type="button" title="Marca a morada no goMAP e abre o formulário Criar com os dados das notas (precisa de uma morada já localizada)">📍 goMAP</button>
       <button id="notasCopiar" type="button">📋 Copiar resumo</button>
       <button id="notasNova" type="button" title="Limpa as notas (esta fica guardada nas notas anteriores)">🗒 Nova chamada</button>
+      <button id="notasApagar" type="button" title="Apaga todas as notas deste PC, a aberta e as anteriores (troca de turno)">🗑 Apagar notas</button>
     </div>
-    <select id="notasHistorico" hidden title="Notas das últimas 24 horas (a que está aberta fica guardada)"></select>
+    <select id="notasHistorico" hidden title="Notas das últimas 12 horas (a que está aberta fica guardada)"></select>
     <div id="notasEstado"></div>
     <div id="notasDetetado"></div>
   </aside>
@@ -119,19 +120,19 @@
 <!-- a ordem conta: cada ficheiro só usa, ao carregar, o que vem nos de cima -->
 <!-- ?v=: muda-se a cada alteração, para o browser não ficar com os ficheiros antigos na cache -->
 <script src="vendor/leaflet.js"></script>
-<script src="ruas.js?v=20261119d"></script>
-<script src="js/correcao.js?v=20261119d"></script>
-<script src="js/comum.js?v=20261119d"></script>
-<script src="js/q112.js?v=20261119d"></script>
-<script src="js/gomap.js?v=20261119d"></script>
-<script src="js/ocorrencias.js?v=20261119d"></script>
-<script src="js/carros.js?v=20261119d"></script>
-<script src="js/mapa.js?v=20261119d"></script>
-<script src="js/separadores.js?v=20261119d"></script>
-<script src="js/folha.js?v=20261119d"></script>
-<script src="js/definicoes.js?v=20261119d"></script>
-<script src="js/pesquisa.js?v=20261119d"></script>
-<script src="js/arranque.js?v=20261119d"></script>
-<script src="js/notas.js?v=20261119d"></script>
+<script src="ruas.js?v=20261119e"></script>
+<script src="js/correcao.js?v=20261119e"></script>
+<script src="js/comum.js?v=20261119e"></script>
+<script src="js/q112.js?v=20261119e"></script>
+<script src="js/gomap.js?v=20261119e"></script>
+<script src="js/ocorrencias.js?v=20261119e"></script>
+<script src="js/carros.js?v=20261119e"></script>
+<script src="js/mapa.js?v=20261119e"></script>
+<script src="js/separadores.js?v=20261119e"></script>
+<script src="js/folha.js?v=20261119e"></script>
+<script src="js/definicoes.js?v=20261119e"></script>
+<script src="js/pesquisa.js?v=20261119e"></script>
+<script src="js/arranque.js?v=20261119e"></script>
+<script src="js/notas.js?v=20261119e"></script>
 </body>
 </html>
