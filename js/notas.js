@@ -32,7 +32,9 @@ const NATUREZAS_NOTAS = [
   { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"] },
   { codigo: "2501", nome: "Elevador", palavras: ["elevador", "elevadores"] },
   { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"] },
-  { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"] }
+  { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"] },
+  { codigo: "8700", nome: "Assistência à população", palavras: ["assistência à população", "assistência população"] },
+  { codigo: "7703", nome: "Auxílio transporte", palavras: ["auxílio transporte", "auxílio ao transporte", "auxílio de transporte"] }
 ];
 // a palavra inteira (não "gas" dentro de "lisboagas"), com qualquer espaço entre as palavras
 const reNatureza = p => new RegExp("(?<![a-z0-9])" + notasBase(p).replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&").replace(/ /g, "\\s+") + "(?![a-z0-9])", "g");
