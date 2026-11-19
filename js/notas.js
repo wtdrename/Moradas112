@@ -30,6 +30,7 @@ const NATUREZAS_NOTAS = [
   { codigo: "6402", nome: "Verificar cheiros", palavras: ["cheiros", "cheiro", "verificar cheiros"] },
   { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta com socorro", "porta socorro"] },
   { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"] },
+  { codigo: "2501", nome: "Elevador", palavras: ["elevador", "elevadores"] },
   { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"] },
   { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"] }
 ];
