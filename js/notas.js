@@ -28,7 +28,7 @@ const NATUREZAS_NOTAS = [
   { codigo: "6301", nome: "Fuga de gás", palavras: ["fuga de gás", "gás"] },
   { codigo: "6401", nome: "Verificar fumos", palavras: ["fumos", "fumo", "verificar fumos"] },
   { codigo: "6402", nome: "Verificar cheiros", palavras: ["cheiros", "cheiro", "verificar cheiros"] },
-  { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta socorro", "porta com socorro"] },
+  { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta com socorro", "porta socorro"] },
   { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"] },
   { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"] },
   { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"] }
@@ -40,12 +40,13 @@ NATUREZAS_NOTAS.forEach(n => n.res = n.palavras.map(reNatureza));
 const RE_NEGA = /(?:^|[^a-z0-9])(?:sem|nao|nem)(?:\s+(?:ha|tem|existem?|se nota|se ve))?\s+$/;
 const naturezaNasNotas = (base, n) => n.res.some(re => [...base.matchAll(re)].some(m => !RE_NEGA.test(base.slice(Math.max(0, m.index - 20), m.index))));
 
-// ---------- auto-completar das notas: ao escrever o início de uma destas, aparece por baixo do cursor (Tab põe, Esc esconde) ----------
-// As palavras das naturezas (de cima) e as de SUGESTOES_NOTAS, outras palavras sem natureza: basta acrescentar à lista,
-// escritas como devem ficar nas notas. Compara-se sem acentos nem maiúsculas; se duas começarem da mesma maneira, aparece a primeira.
+// ---------- auto-completar das notas: ao escrever o início de uma destas, aparecem por baixo do cursor ----------
+// (↑↓ escolhem, Tab põe, Esc esconde). As palavras das naturezas (de cima), uma opção por natureza (a primeira da lista dela
+// que serve: "porta" dá "porta com socorro" e "porta sem socorro"), e as de SUGESTOES_NOTAS, outras palavras sem natureza:
+// basta acrescentar à lista, escritas como devem ficar nas notas. Compara-se sem acentos nem maiúsculas.
 const SUGESTOES_NOTAS = [];
-const PALAVRAS_SUGERIDAS = [...NATUREZAS_NOTAS.flatMap(n => n.palavras), ...SUGESTOES_NOTAS];
-// a sugestão para o texto antes do cursor: { ini, palavra }, ou null. Conta o fim da linha a partir do início de uma palavra
+const GRUPOS_SUGERIDOS = [...NATUREZAS_NOTAS.map(n => n.palavras), ...SUGESTOES_NOTAS.map(p => [p])];
+// as sugestões para o texto antes do cursor: { ini, palavras }, ou null. Conta o fim da linha a partir do início de uma palavra
 // (com 3 letras pelo menos), do mais comprido para o mais curto: "acidente ro" sugere "acidente rodoviário"
 function sugestaoNotas(antes) {
   const linha = antes.slice(antes.lastIndexOf("\n") + 1);
@@ -54,8 +55,8 @@ function sugestaoNotas(antes) {
   for (let i = 0; i <= base.length - 3; i++) {
     if (i && /[a-z0-9]/.test(base[i - 1])) continue;
     const fim = base.slice(i);
-    const palavra = PALAVRAS_SUGERIDAS.find(s => { const b = notasBase(s); return b.length > fim.length && b.startsWith(fim); });
-    if (palavra) return { ini: antes.length - linha.length + i, palavra };
+    const palavras = GRUPOS_SUGERIDOS.map(g => g.find(s => { const b = notasBase(s); return b.length > fim.length && b.startsWith(fim); })).filter(Boolean);
+    if (palavras.length) return { ini: antes.length - linha.length + i, palavras: palavras.slice(0, 6) };
   }
   return null;
 }
@@ -267,7 +268,7 @@ function ruaDaLinha(linha) {
 // resumo no formato habitual, sem rótulos: rua / contactos das entidades / informações
 // (o nome e o telefone de quem liga não entram: copiam-se à parte, nos botões do painel)
 // sem a morada (vai pelo ponto marcado no goMAP; está no painel, com 🔍) e sem o número do CODU
-// (vai só para "Numeração outras Entidades")
+// (vai só para "Numeração outras Entidades"), e sem a natureza (vai no seu campo; ver semNaturezas)
 function resumoNotas(texto) {
   const d = detetarNotas(texto), linhas = [];
   for (const t of d.telefones) if (t.de) linhas.push(t.de + " " + fmtTel(t.digitos));
@@ -277,9 +278,28 @@ function resumoNotas(texto) {
     let base = notasBase(linha), s = linha;
     for (const re of nomes) { const m = re.exec(base); if (m) { s = s.slice(0, m.index) + s.slice(m.index + m[0].length); base = notasBase(s); } }
     s = s.replace(/(^|\s)(senhora|senhor|snra|snr|sra|sr|dona|d\.|reclamante)\.?:?(?=\s|$)/gi, " ").replace(/\s+/g, " ").replace(/^[\s,;:.-]+/, "").trim();
+    s = semNaturezas(s);
     if (s) linhas.push(s);
   }
   return linhas.join("\n");
+}
+
+// tira da linha as partes (entre vírgulas, pontos, ";" ou " - ") que são só natureza: "acidente rodoviário com encarcerados"
+// sai toda, "atropelamento, vítima consciente" fica "vítima consciente". Dentro de uma frase a palavra fica ("cheiro a gás no
+// prédio"), e a negada também ("acidente rodoviário sem encarcerados" é informação)
+function semNaturezas(linha) {
+  const partes = linha.split(/(\s*[,;]\s*|\.\s+|\s+[-–]\s+)/); // [parte, separador, parte, …]
+  const fica = [];
+  for (let i = 0; i < partes.length; i += 2) if (!soNatureza(partes[i])) fica.push(fica.length ? partes[i - 1] : "", partes[i]);
+  return fica.length === partes.length + 1 ? linha : fica.join("").replace(/[\s,;.-]+$/, "").trim(); // sem nada tirado, fica igual
+}
+function soNatureza(parte) {
+  const base = notasBase(parte);
+  let resto = base, achou = false;
+  for (const n of NATUREZAS_NOTAS) for (const re of n.res) {
+    resto = resto.replace(re, (m, i) => RE_NEGA.test(base.slice(Math.max(0, i - 20), i)) ? m : (achou = true, " ".repeat(m.length)));
+  }
+  return achou && !resto.replace(/(?<![a-z0-9])(?:com|e|de|c\/|s\/|verificar)(?![a-z0-9])/g, " ").trim();
 }
 
 // o que vai para o formulário Criar do goMAP (Telefone: 9 algarismos; Nome: 50; Observações: 150).
@@ -501,7 +521,7 @@ function dadosParaGoMAP() {
     notas.value = ""; desenhar(); preencherLista(); notas.focus(); moradaAuto = "";
   };
 
-  // ---- auto-completar (SUGESTOES_NOTAS): a sugestão aparece por baixo do cursor; Tab ou clique põe-na, Esc esconde ----
+  // ---- auto-completar (sugestaoNotas): as sugestões aparecem por baixo do cursor; ↑↓ escolhem, Tab ou clique põe, Esc esconde ----
   const sug = document.body.appendChild(Object.assign(document.createElement("div"), { id: "notasSugestao", hidden: true }));
   let sugestao = null;
   const esconderSugestao = () => { sugestao = null; sug.hidden = true; };
@@ -522,22 +542,33 @@ function dadosParaGoMAP() {
     copia.remove();
     return { x, y, dentro: y > r.top && y < r.bottom };
   }
-  function verSugestao() {
+  // manter: a caixa só mudou de sítio (scroll, tamanho), fica a opção escolhida com as setas; ao escrever volta à primeira
+  function verSugestao(manter) {
     const i = notas.selectionStart;
     // só com o cursor no fim de uma palavra (nada escolhido, e a seguir um espaço ou o fim)
     const s = notas.selectionEnd === i && !/^\S/.test(notas.value.slice(i)) ? sugestaoNotas(notas.value.slice(0, i)) : null;
     const p = s && cursorNoEcra(s.ini);
     if (!s || !p.dentro) return esconderSugestao();
     // "Chei" -> "Cheiros": a maiúscula escrita fica
-    const escrito = notas.value.slice(s.ini, i);
-    sugestao = { ini: s.ini, palavra: escrito[0] !== escrito[0].toLowerCase() ? s.palavra[0].toUpperCase() + s.palavra.slice(1) : s.palavra };
-    sug.replaceChildren(sugestao.palavra, Object.assign(document.createElement("kbd"), { textContent: "Tab" }));
+    const escrito = notas.value.slice(s.ini, i), maiuscula = escrito[0] !== escrito[0].toLowerCase();
+    const palavras = s.palavras.map(w => maiuscula ? w[0].toUpperCase() + w.slice(1) : w);
+    sugestao = { ini: s.ini, palavras, escolhida: manter === true && sugestao ? Math.min(sugestao.escolhida, palavras.length - 1) : 0 };
+    desenharSugestao();
     sug.hidden = false;
     sug.style.left = Math.max(8, Math.min(p.x, innerWidth - sug.offsetWidth - 8)) + "px";
     sug.style.top = p.y + 2 + "px";
   }
+  function desenharSugestao() {
+    sug.replaceChildren(...sugestao.palavras.map((w, k) => {
+      const op = Object.assign(document.createElement("div"), { className: k === sugestao.escolhida ? "sel" : "" });
+      op.append(w);
+      if (k === sugestao.escolhida) op.appendChild(Object.assign(document.createElement("kbd"), { textContent: "Tab" }));
+      op.addEventListener("mousedown", () => { sugestao.escolhida = k; aceitarSugestao(); });
+      return op;
+    }));
+  }
   function aceitarSugestao() {
-    const { ini, palavra } = sugestao, fim = notas.selectionStart;
+    const { ini, palavras, escolhida } = sugestao, palavra = palavras[escolhida], fim = notas.selectionStart;
     const texto = palavra + (/^\s/.test(notas.value.slice(fim)) ? "" : " ");
     esconderSugestao();
     notas.focus();
@@ -553,13 +584,20 @@ function dadosParaGoMAP() {
     if (sug.hidden) return;
     if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); aceitarSugestao(); }
     else if (e.key === "Escape") { e.preventDefault(); esconderSugestao(); }
+    else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && sugestao.palavras.length > 1) {
+      e.preventDefault();
+      const n = sugestao.palavras.length;
+      sugestao.escolhida = (sugestao.escolhida + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+      desenharSugestao();
+    }
     else if (/^(Arrow|Home|End|Page)/.test(e.key)) esconderSugestao();
   });
   for (const ev of ["blur", "click"]) notas.addEventListener(ev, esconderSugestao);
   // a caixa das notas andou ou mudou de tamanho: a sugestão acompanha o cursor
-  for (const [alvo, ev] of [[notas, "scroll"], [window, "resize"]]) alvo.addEventListener(ev, () => { if (!sug.hidden) verSugestao(); });
+  for (const [alvo, ev] of [[notas, "scroll"], [window, "resize"]]) alvo.addEventListener(ev, () => { if (!sug.hidden) verSugestao(true); });
   // mousedown e não click: assim as notas não perdem o foco (o blur escondia a sugestão antes do clique)
-  sug.addEventListener("mousedown", e => { e.preventDefault(); aceitarSugestao(); });
+  // (cada opção põe-se no seu mousedown, em desenharSugestao)
+  sug.addEventListener("mousedown", e => e.preventDefault());
 
   // F2 salta entre a caixa da morada e as notas
   document.addEventListener("keydown", e => {
