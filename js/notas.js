@@ -340,31 +340,11 @@ function dadosParaGoMAP() {
   }
   if (!atualId) atualId = novoId();
 
-  // o ficheiro no PC (pelo servidor): enviado 1,5 s depois da última alteração; sem servidor fica só no browser
-  // Só escreve no ficheiro depois de o ler, para um browser sem notas (dados limpos) não apagar as que lá estão:
-  // as do ficheiro que faltam aqui juntam-se à lista.
-  // Aberta pelo GitHub Pages não há servidor: as notas ficam só no browser e nunca saem do PC (discoLido fica false,
-  // por isso também não se manda nada ao fechar a página)
-  let tDisco, discoLido = false;
-  function lerDisco() {
-    if (!COM_SERVIDOR) return Promise.resolve();
-    return fetch("/notas").then(r => r.ok ? r.json() : []).then(doDisco => {
-      const novas = validas(doDisco).filter(d => !historico.some(n => n.id === d.id));
-      discoLido = true;
-      if (novas.length) { historico.push(...novas); preencherLista(); }
-      guardar(true);
-    }).catch(() => {});
-  }
-  const paraDisco = () => discoLido
-    ? fetch("/notas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(historico) }).catch(() => {})
-    : lerDisco();
-  function guardar(jaDisco) {
+  // as notas ficam só neste browser (não há servidor nem ficheiro no PC) e nunca saem do PC
+  function guardar() {
     historico = validas(historico);
     gravarLS(HIST, historico); gravarLS(ATUAL, atualId);
-    clearTimeout(tDisco);
-    if (jaDisco) paraDisco(); else tDisco = setTimeout(paraDisco, 1500);
   }
-  window.addEventListener("pagehide", () => { if (tDisco && discoLido) navigator.sendBeacon("/notas", new Blob([JSON.stringify(historico)], { type: "application/json" })); });
   // noutro separador da Moradas 112 mudaram as notas: fica com as de lá, menos a que está aberta aqui
   window.addEventListener("storage", e => {
     if (e.key !== HIST) return;
@@ -462,7 +442,7 @@ function dadosParaGoMAP() {
   }
   function abrirNota(id) {
     const n = historico.find(x => x.id === id); if (!n) return;
-    gravarAtual(); atualId = id; guardar(true);
+    gravarAtual(); atualId = id; guardar();
     notas.value = n.texto; moradaAuto = ""; desenhar(); preencherLista(); notas.focus();
     avisar("Aberta a nota das " + quandoTxt(n.inicio) + " — a que estava escrita ficou nas notas anteriores.");
   }
@@ -472,7 +452,6 @@ function dadosParaGoMAP() {
   guardar(); // tira as de há mais de 24 horas
   preencherLista();
   desenhar();
-  lerDisco();
   // a morada detetada nas notas vai logo para a caixa de pesquisa (0,7 s depois de parar de escrever, para não
   // pesquisar uma rua a meio, nem "heli" a meio de "helicóptero"). O cursor fica nas notas.
   let moradaAuto = "", tAuto;
@@ -518,7 +497,7 @@ function dadosParaGoMAP() {
   document.getElementById("notasCopiar").onclick =() => notas.value.trim() ? copiar(resumoNotas(notas.value), "Resumo copiado.") : avisar("Não há notas.");
   document.getElementById("notasNova").onclick = () => {
     if (!notas.value.trim()) { notas.focus(); return; } // já está vazia
-    gravarAtual(); atualId = novoId(); guardar(true);
+    gravarAtual(); atualId = novoId(); guardar();
     notas.value = ""; desenhar(); preencherLista(); notas.focus(); moradaAuto = "";
   };
 
