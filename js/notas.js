@@ -26,15 +26,15 @@ const NATUREZAS_NOTAS = [
   { codigo: "2101", nome: "Atropelamento", palavras: ["atropelamento", "atropelado", "atropelada"] },
   { codigo: "2102", nome: "Acidente rodoviário", palavras: ["acidente rodoviário"] },
   { codigo: "6301", nome: "Fuga de gás", palavras: ["fuga de gás", "gás"] },
-  { codigo: "6401", nome: "Verificar fumos", palavras: ["fumos", "fumo", "verificar fumos"] },
-  { codigo: "6402", nome: "Verificar cheiros", palavras: ["cheiros", "cheiro", "verificar cheiros"] },
+  { codigo: "6401", nome: "Verificar fumos", palavras: ["fumos", "fumo", "verificar fumos"], fonte: "PUB" },
+  { codigo: "6402", nome: "Verificar cheiros", palavras: ["cheiros", "cheiro", "verificar cheiros"], fonte: "PUB" },
   { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta com socorro", "porta socorro"] },
-  { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"] },
+  { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"], fonte: "PUB" },
   { codigo: "2501", nome: "Elevador", palavras: ["elevador", "elevadores"] },
-  { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"] },
-  { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"] },
-  { codigo: "8700", nome: "Assistência à população", palavras: ["assistência à população", "assistência população", "apoio"] },
-  { codigo: "7703", nome: "Auxílio transporte", palavras: ["auxílio transporte", "auxílio ao transporte", "auxílio de transporte"] }
+  { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"], fonte: "RSBL" },
+  { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"], fonte: "RSBL" },
+  { codigo: "8700", nome: "Assistência à população", palavras: ["assistência à população", "assistência população", "apoio"], fonte: "PUB" },
+  { codigo: "7703", nome: "Auxílio transporte", palavras: ["auxílio transporte", "auxílio ao transporte", "auxílio de transporte"], fonte: "PUB" }
 ];
 // a palavra inteira (não "gas" dentro de "lisboagas"), com qualquer espaço entre as palavras
 const reNatureza = p => new RegExp("(?<![a-z0-9])" + notasBase(p).replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&").replace(/ /g, "\\s+") + "(?![a-z0-9])", "g");
