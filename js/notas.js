@@ -64,7 +64,8 @@ function sugestaoNotas(antes) {
   for (let i = 0; i <= base.length - 3; i++) {
     if (i && /[a-z0-9]/.test(base[i - 1])) continue;
     const fim = base.slice(i);
-    const palavras = GRUPOS_SUGERIDOS.map(g => g.find(s => { const b = notasBase(s); return b.length > fim.length && b.startsWith(fim); })).filter(Boolean);
+    // a opção é sempre o texto certo da natureza (a primeira palavra dela): "bura" ou "buraco" dão "sinalizar buraco"
+    const palavras = GRUPOS_SUGERIDOS.map(g => g.some((s, k) => { const b = notasBase(s); return b.startsWith(fim) && (b.length > fim.length || k > 0); }) ? g[0] : null).filter(Boolean);
     if (palavras.length) return { ini: antes.length - linha.length + i, palavras: palavras.slice(0, 6) };
   }
   return null;
