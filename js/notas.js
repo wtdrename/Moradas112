@@ -44,7 +44,8 @@ const NATUREZAS_NOTAS = [
 ];
 // a palavra inteira (não "gas" dentro de "lisboagas"), com qualquer espaço entre as palavras
 const reNatureza = p => new RegExp("(?<![a-z0-9])" + notasBase(p).replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&").replace(/ /g, "\\s+") + "(?![a-z0-9])", "g");
-NATUREZAS_NOTAS.forEach(n => n.res = n.palavras.map(reNatureza));
+// o nome da natureza também conta (é o texto que o auto-completar põe nas notas)
+NATUREZAS_NOTAS.forEach(n => n.res = [n.nome, ...n.palavras].map(reNatureza));
 // "sem encarcerados", "não há cheiro", "nem fumo": a palavra negada não conta
 const RE_NEGA = /(?:^|[^a-z0-9])(?:sem|nao|nem)(?:\s+(?:ha|tem|existem?|se nota|se ve))?\s+$/;
 const naturezaNasNotas = (base, n) => n.res.some(re => [...base.matchAll(re)].some(m => !RE_NEGA.test(base.slice(Math.max(0, m.index - 20), m.index))));
@@ -54,7 +55,8 @@ const naturezaNasNotas = (base, n) => n.res.some(re => [...base.matchAll(re)].so
 // que serve: "porta" dá "porta com socorro" e "porta sem socorro"), e as de SUGESTOES_NOTAS, outras palavras sem natureza:
 // basta acrescentar à lista, escritas como devem ficar nas notas. Compara-se sem acentos nem maiúsculas.
 const SUGESTOES_NOTAS = [];
-const GRUPOS_SUGERIDOS = [...NATUREZAS_NOTAS.map(n => n.palavras), ...SUGESTOES_NOTAS.map(p => [p])];
+// cada grupo: o texto que fica nas notas (o nome da natureza) primeiro, depois as palavras que o sugerem
+const GRUPOS_SUGERIDOS = [...NATUREZAS_NOTAS.map(n => [n.nome, ...n.palavras]), ...SUGESTOES_NOTAS.map(p => [p])];
 // as sugestões para o texto antes do cursor: { ini, palavras }, ou null. Conta o fim da linha a partir do início de uma palavra
 // (com 3 letras pelo menos), do mais comprido para o mais curto: "acidente ro" sugere "acidente rodoviário"
 function sugestaoNotas(antes) {
@@ -64,7 +66,7 @@ function sugestaoNotas(antes) {
   for (let i = 0; i <= base.length - 3; i++) {
     if (i && /[a-z0-9]/.test(base[i - 1])) continue;
     const fim = base.slice(i);
-    // a opção é sempre o texto certo da natureza (a primeira palavra dela): "bura" ou "buraco" dão "sinalizar buraco"
+    // a opção é sempre o nome da natureza: "bura" ou "buraco" dão "Sinalizar buraco"
     const palavras = GRUPOS_SUGERIDOS.map(g => g.some((s, k) => { const b = notasBase(s); return b.startsWith(fim) && (b.length > fim.length || k > 0); }) ? g[0] : null).filter(Boolean);
     if (palavras.length) return { ini: antes.length - linha.length + i, palavras: palavras.slice(0, 6) };
   }
