@@ -90,6 +90,9 @@ main { position: relative; }
 #notasDetetado .resumo { margin: 4px 0 0; padding: 6px 8px; background: var(--fundo); border-radius: 6px; white-space: pre-wrap; font: inherit; }
 #notasHistorico { width: 100%; margin-bottom: 6px; padding: 5px 8px; font: inherit; font-size: 14px; border: 1px solid var(--borda); border-radius: 8px; background: var(--cartao); color: var(--texto); cursor: pointer; }
 #notasEstado { min-height: 18px; font-size: 13px; color: var(--verde); }
+#notasSugestao { position: fixed; z-index: 2000; padding: 3px 8px; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  background: var(--cartao); color: var(--texto); border: 1px solid var(--azul); border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, .2); }
+#notasSugestao kbd { margin-left: 8px; font-weight: 400; color: var(--suave); }
 h1 { font-size: 20px; margin: 0 0 12px; }
 .linha { display: flex; gap: 8px; }
 input { flex: 1; min-width: 0; font: inherit; font-size: 22px; padding: 12px 14px; border: 2px solid var(--borda); border-radius: 8px; background: var(--cartao); color: var(--texto); }

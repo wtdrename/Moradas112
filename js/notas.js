@@ -15,6 +15,27 @@ const regrasDasNotas = base => REGRAS_NOTAS.filter(r => r.re.test(base));
 // texto sem acentos e em minúsculas, com o mesmo comprimento do original (para recortar o original nas mesmas posições)
 const notasBase = s => s.replace(/[\s\S]/g, c => c.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().charAt(0) || c);
 
+// ---------- auto-completar das notas: ao escrever o início de uma destas, aparece por baixo do cursor (Tab põe, Esc esconde) ----------
+// Para uma sugestão nova basta acrescentar à lista, escrita como deve ficar nas notas (com acentos); compara-se sem acentos
+// nem maiúsculas. Se duas começarem da mesma maneira, aparece a primeira da lista.
+const SUGESTOES_NOTAS = [
+  "cheiros", "fumos", "acidente rodoviário"
+];
+// a sugestão para o texto antes do cursor: { ini, palavra }, ou null. Conta o fim da linha a partir do início de uma palavra
+// (com 3 letras pelo menos), do mais comprido para o mais curto: "acidente ro" sugere "acidente rodoviário"
+function sugestaoNotas(antes) {
+  const linha = antes.slice(antes.lastIndexOf("\n") + 1);
+  if (!/\p{L}$/u.test(linha)) return null;
+  const base = notasBase(linha);
+  for (let i = 0; i <= base.length - 3; i++) {
+    if (i && /[a-z0-9]/.test(base[i - 1])) continue;
+    const fim = base.slice(i);
+    const palavra = SUGESTOES_NOTAS.find(s => { const b = notasBase(s); return b.length > fim.length && b.startsWith(fim); });
+    if (palavra) return { ini: antes.length - linha.length + i, palavra };
+  }
+  return null;
+}
+
 const ENTIDADES = [
   ["PSP", /\bpsp\b/], ["Polícia Municipal", /\b(pm|policia municipal)\b/], ["GNR", /\bgnr\b/], ["PJ", /\bpj\b/],
   ["INEM", /\binem\b/], ["CODU", /\bcodu\b/], ["Cruz Vermelha", /\b(cvp|cruz vermelha)\b/],
@@ -452,6 +473,66 @@ function dadosParaGoMAP() {
     gravarAtual(); atualId = novoId(); guardar(true);
     notas.value = ""; desenhar(); preencherLista(); notas.focus(); moradaAuto = "";
   };
+
+  // ---- auto-completar (SUGESTOES_NOTAS): a sugestão aparece por baixo do cursor; Tab ou clique põe-na, Esc esconde ----
+  const sug = document.body.appendChild(Object.assign(document.createElement("div"), { id: "notasSugestao", hidden: true }));
+  let sugestao = null;
+  const esconderSugestao = () => { sugestao = null; sug.hidden = true; };
+  // posição do cursor no ecrã: uma cópia invisível da caixa, com o mesmo texto até ao cursor
+  // (propriedades uma a uma: o Firefox não dá "font", "padding" nem "border" no getComputedStyle)
+  function cursorNoEcra(i) {
+    const css = getComputedStyle(notas), copia = document.createElement("div");
+    for (const p of ["boxSizing", "width", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "borderTopWidth", "borderRightWidth",
+      "borderBottomWidth", "borderLeftWidth", "fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing"]) copia.style[p] = css[p];
+    Object.assign(copia.style, { position: "absolute", top: "0", left: "0", visibility: "hidden", borderStyle: "solid", whiteSpace: "pre-wrap", overflowWrap: "break-word" });
+    copia.textContent = notas.value.slice(0, i);
+    const marca = copia.appendChild(document.createElement("span"));
+    marca.textContent = "​";
+    document.body.appendChild(copia);
+    const r = notas.getBoundingClientRect();
+    const x = r.left + parseFloat(css.borderLeftWidth) + marca.offsetLeft - notas.scrollLeft;
+    const y = r.top + parseFloat(css.borderTopWidth) + marca.offsetTop + marca.offsetHeight - notas.scrollTop;
+    copia.remove();
+    return { x, y, dentro: y > r.top && y < r.bottom };
+  }
+  function verSugestao() {
+    const i = notas.selectionStart;
+    // só com o cursor no fim de uma palavra (nada escolhido, e a seguir um espaço ou o fim)
+    const s = notas.selectionEnd === i && !/^\S/.test(notas.value.slice(i)) ? sugestaoNotas(notas.value.slice(0, i)) : null;
+    const p = s && cursorNoEcra(s.ini);
+    if (!s || !p.dentro) return esconderSugestao();
+    // "Chei" -> "Cheiros": a maiúscula escrita fica
+    const escrito = notas.value.slice(s.ini, i);
+    sugestao = { ini: s.ini, palavra: escrito[0] !== escrito[0].toLowerCase() ? s.palavra[0].toUpperCase() + s.palavra.slice(1) : s.palavra };
+    sug.replaceChildren(sugestao.palavra, Object.assign(document.createElement("kbd"), { textContent: "Tab" }));
+    sug.hidden = false;
+    sug.style.left = Math.max(8, Math.min(p.x, innerWidth - sug.offsetWidth - 8)) + "px";
+    sug.style.top = p.y + 2 + "px";
+  }
+  function aceitarSugestao() {
+    const { ini, palavra } = sugestao, fim = notas.selectionStart;
+    const texto = palavra + (/^\s/.test(notas.value.slice(fim)) ? "" : " ");
+    esconderSugestao();
+    notas.focus();
+    notas.setSelectionRange(ini, fim);
+    // como se fosse escrito: o Ctrl+Z desfaz, e o "input" grava e volta a detetar
+    if (!document.execCommand("insertText", false, texto)) {
+      notas.setRangeText(texto, ini, fim, "end");
+      notas.dispatchEvent(new Event("input"));
+    }
+  }
+  notas.addEventListener("input", verSugestao);
+  notas.addEventListener("keydown", e => {
+    if (sug.hidden) return;
+    if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); aceitarSugestao(); }
+    else if (e.key === "Escape") { e.preventDefault(); esconderSugestao(); }
+    else if (/^(Arrow|Home|End|Page)/.test(e.key)) esconderSugestao();
+  });
+  for (const ev of ["blur", "click"]) notas.addEventListener(ev, esconderSugestao);
+  // a caixa das notas andou ou mudou de tamanho: a sugestão acompanha o cursor
+  for (const [alvo, ev] of [[notas, "scroll"], [window, "resize"]]) alvo.addEventListener(ev, () => { if (!sug.hidden) verSugestao(); });
+  // mousedown e não click: assim as notas não perdem o foco (o blur escondia a sugestão antes do clique)
+  sug.addEventListener("mousedown", e => { e.preventDefault(); aceitarSugestao(); });
 
   // F2 salta entre a caixa da morada e as notas
   document.addEventListener("keydown", e => {
