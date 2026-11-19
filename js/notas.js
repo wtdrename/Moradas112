@@ -33,7 +33,7 @@ const NATUREZAS_NOTAS = [
   { codigo: "2501", nome: "Elevador", palavras: ["elevador", "elevadores"] },
   { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"] },
   { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"] },
-  { codigo: "8700", nome: "Assistência à população", palavras: ["assistência à população", "assistência população"] },
+  { codigo: "8700", nome: "Assistência à população", palavras: ["assistência à população", "assistência população", "apoio"] },
   { codigo: "7703", nome: "Auxílio transporte", palavras: ["auxílio transporte", "auxílio ao transporte", "auxílio de transporte"] }
 ];
 // a palavra inteira (não "gas" dentro de "lisboagas"), com qualquer espaço entre as palavras
