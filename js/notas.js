@@ -39,6 +39,7 @@ const NATUREZAS_NOTAS = [
   { codigo: "3301", nome: "Queda de revestimento", palavras: ["queda de revestimento", "queda revestimento"], fonte: "PUB" },
   { codigo: "7201", nome: "Sinalizar buraco", palavras: ["sinalizar buraco", "buraco"], fonte: "PUB" },
   { codigo: "7500", nome: "Fecho de Água", palavras: ["fecho de água", "fecho água", "fechar água", "fecho de agua", "fecho agua"], fonte: "PUB" },
+  { codigo: "7800", nome: "Apanhar animal", palavras: ["apanhar animal", "resgate animal", "resgate de animal", "recolha de animais", "recolha de animal", "recolha animal"], fonte: "PUB" },
   { codigo: "1300", nome: "Incêndio inculto", palavras: ["incêndio inculto", "incêndio em inculto", "fogo inculto", "fogo em inculto"] },
   { codigo: "1401", nome: "Incêndio habitação", palavras: ["incêndio habitação", "incêndio em habitação", "fogo habitação", "fogo em habitação"] },
   { codigo: "1701", nome: "Incêndio rodoviário", palavras: ["incêndio rodoviário", "incêndio viatura", "incêndio em viatura", "incêndio de viatura",
