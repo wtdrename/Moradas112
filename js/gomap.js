@@ -2,10 +2,22 @@
 
 // "av almirante reis 50 3 esq" + "Avenida Almirante Reis, 50" -> "Nº 50, 3º Esq."
 const LADOS = { esq: "Esq.", e: "Esq.", esquerdo: "Esq.", dto: "Dto.", dt: "Dto.", d: "Dto.", dir: "Dto.", direito: "Dto.", frt: "Frente", f: "Frente", frente: "Frente", tras: "Trás" };
+// separa o texto em palavras, desfazendo o que vem colado: "nº9" -> "9", "1ºc" -> "1º c", "1dir" -> "1 dir"
+function palavrasMorada(texto) {
+  return texto.trim().split(/[\s,]+/).flatMap(x => {
+    const t = x.replace(/^n\s*[º°ª.o]?\s*(?=\d)/i, "");
+    let m = t.match(/^(\d+)\s*[º°ªo]\s*([a-z]+)\.?$/i);
+    if (m) return [m[1] + "º", m[2]];
+    m = t.match(/^(\d+)([a-z]{2,})\.?$/i);
+    if (m && LADOS[semAcentos(m[2]).toLowerCase()]) return [m[1], m[2]];
+    return [t];
+  }).filter(Boolean);
+}
+
 function referencia(texto, morada) {
   const m = morada.match(/,\s*(\S+)$/);
   if (!m) return "";
-  const porta = m[1], p = texto.trim().split(/[\s,]+/);
+  const porta = m[1], p = palavrasMorada(texto);
   const portas = [porta, ...porta.split(/[-\/]/)].map(x => x.toLowerCase()); // "18-20": também vale escrever só 18 ou 20
   const i = p.findIndex((x, j) => j > 0 && portas.includes(x.toLowerCase()));
   const andar = (i < 0 ? [] : p.slice(i + 1)).map(x => {
@@ -24,7 +36,7 @@ function referencia(texto, morada) {
 function numeroDaFrente(frente, texto) {
   const partes = frente.toLowerCase().split(/[-\/]/);
   if (partes.length < 2) return frente;
-  return texto.trim().split(/[\s,]+/).slice(1).find(x => partes.includes(x.toLowerCase())) || frente;
+  return palavrasMorada(texto).slice(1).find(x => partes.includes(x.toLowerCase())) || frente;
 }
 
 // O número é o do edifício onde o pin ficou (o script diz qual): fora dele "[Frente ao nº 20] 3º Esq.", dentro de outro edifício

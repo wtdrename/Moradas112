@@ -88,7 +88,7 @@ const RE_NOME = /(?:^|[^a-z])(sr|sra|snr|snra|senhor|senhora|dona|d\.|nome|recla
 const NAO_NOME = new Set(["diz", "que", "refere", "informa", "liga", "ligou", "esta", "estao", "tem", "ha", "tlm", "tel", "telefone",
   "contacto", "no", "na", "nos", "nas", "em", "com", "e", "para", "porque", "mas", "ja", "nao", "sim", "do", "o", "a", "os", "as", "vizinho", "vizinha"]);
 const LIGA_NOME = new Set(["de", "da", "do", "dos", "das", "e"]);
-const RE_LOCAL = /\b(\d{1,2}\s*[ºo°]?\s*(?:andar|piso)|r\/c|rc|res[\s-]do[\s-]chao|cave|sotao|\d{1,2}\s*[ºo°]?\s*(?:esq|dto|dt|drt|frt|frente)[a-z]*\.?|lote\s+[a-z0-9]+|porta\s+(?!(?:socorro|sem|com)(?![a-z0-9])|[cs]\/)[a-z0-9]+|bloco\s+[a-z0-9]+|apartamento\s+[a-z0-9]+)(?![a-z0-9])/g;
+const RE_LOCAL = /\b(\d{1,2}\s*[ºo°]?\s*(?:andar|piso)|r\/c|rc|res[\s-]do[\s-]chao|cave|sotao|\d{1,2}\s*[ºo°ª]?\s*(?:esq|dto|dt|drt|dir|frt|frente)[a-z]*\.?|\d{1,2}\s*[ºo°ª]\s*[a-z]\.?|lote\s+[a-z0-9]+|porta\s+(?!(?:socorro|sem|com)(?![a-z0-9])|[cs]\/)[a-z0-9]+|bloco\s+[a-z0-9]+|apartamento\s+[a-z0-9]+)(?![a-z0-9])/g;
 const RE_ALERTA = /\b(ferid[oa]s?|encarcerad[oa]s?|pres[oa]s?|fumo|gas|chamas?|fogo|explos[a-z]*|crianc[a-z]*|bebes?|idos[oa]s?|acamad[oa]s?|inconscien[a-z]*|nao respira|sangue|queda|vitimas?|mort[oa]s?|inalac[a-z]*|elevador|cheiro)\b/g;
 const RE_RUA = /(?:^|[^a-z])((?:rua|r\.|avenida|av\.?|avda|travessa|trav\.?|tv\.?|calcada|largo|lg\.?|praca|pca|estrada|beco|alameda|praceta|azinhaga|bairro|quinta|escadinhas|escadas)\s+[^\n,;:]+)/g;
 const FIM_RUA = new Set(["diz", "que", "ha", "onde", "perto", "junto", "ao", "esquina", "frente", "tel", "tlm", "telefone", "psp", "inem",
