@@ -267,8 +267,17 @@ function pareceNome(resto) {
 
 // a linha é uma morada? usa a lista de ruas de Lisboa (ruas.js) e a correção de erros de escrita da página.
 // Com número de porta ou tipo de via ("rua", "av"…) aceita erros de escrita; só com o nome, tem de ser quase igual.
+// guarda o resultado de cada linha já vista: ao escrever, só a linha que mudou volta a ser comparada com as ruas todas
+const CACHE_RUA = new Map();
 function ruaDaLinha(linha) {
   if (typeof indiceRuas !== "function" || !indiceRuas().length) return "";
+  if (CACHE_RUA.has(linha)) return CACHE_RUA.get(linha);
+  if (CACHE_RUA.size > 2000) CACHE_RUA.clear();
+  const r = ruaDaLinhaCalc(linha);
+  CACHE_RUA.set(linha, r);
+  return r;
+}
+function ruaDaLinhaCalc(linha) {
   const pal = semAcentos(linha).split(" ").filter(Boolean);
   const i = pal.findIndex((p, k) => k > 0 && /^\d+[a-z]?$/.test(p));
   const q = partes(i > 0 ? pal.slice(0, i) : pal);
