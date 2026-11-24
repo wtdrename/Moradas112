@@ -173,7 +173,8 @@ function detetarNotas(texto) {
     for (const [, re] of ENTIDADES) resto = resto.replace(new RegExp(re.source, "g"), " ");
     resto = resto.replace(/[^a-z0-9º°\/' -]/g, " ").replace(/\s+/g, " ").trim();
     if (!resto) return; // só telefone(s), já estão em r.telefones
-    const rua = ruaDaLinha(semTel);
+    // já há uma morada: as outras linhas não são moradas (senão "leonor" parecia uma rua e não o nome)
+    const rua = linhasRua.size ? "" : ruaDaLinha(semTel);
     if (rua) {
       linhasRua.add(i);
       const lado = [...lb.matchAll(RE_LOCAL)].map(m => linhasT[i].slice(m.index, m.index + m[0].length));
@@ -186,6 +187,7 @@ function detetarNotas(texto) {
   });
 
   for (const m of base.matchAll(RE_RUA)) {
+    if (r.ruas.length) break; // já há uma morada
     const ini = m.index + m[0].length - m[1].length;
     if (linhasRua.has(base.slice(0, ini).split("\n").length - 1)) continue; // a linha já foi reconhecida como morada
     const pal = m[1].split(/\s+/), orig = texto.slice(ini, ini + m[1].length).split(/\s+/);
