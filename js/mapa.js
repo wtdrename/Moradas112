@@ -23,6 +23,9 @@ function criarMapa() {
     icon: L.divIcon({ className: "pino", html: PINO_SVG, iconSize: [30, 45], iconAnchor: [15, 45] })
   }).addTo(mapaL);
   pino.on("dragend", () => pinoMovido(pino.getLatLng()));
+  // a caixa do mapa mudou de tamanho (pegas das colunas, notas a crescer, janela): sem isto o Leaflet não pede os
+  // quadrados da parte nova e ficam cinzentos. Escondido (outro separador) não tem tamanho: acerta-se ao voltar
+  new ResizeObserver(([e]) => { if (e.contentRect.width && e.contentRect.height) mapaL.invalidateSize(); }).observe(mapaFrame);
 }
 
 function desenharMapa(recentrar = true) {
