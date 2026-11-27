@@ -422,24 +422,33 @@ function dadosParaGoMAP() {
     copiar(textoCopiar, nome + " copiado (" + porque + ").");
   }
 
-  // botão das naturezas com "ligar": o script Quartéis 112 liga pela Finesse para o contacto (o número está no script).
-  // Pergunta antes: um clique sem querer não liga a ninguém. O painel redesenha-se a cada tecla, por isso o resultado vai no estado
+  // botões "📞 CHAMAR PSP/PM" (naturezas com "ligar": o número está no script) e "📞 TELEFONAR REQUERENTE" (telefones das notas):
+  // o script Quartéis 112 pergunta ao operador e liga pela Finesse. A pergunta é do script (a partir da 4.72), não da página;
+  // com um script mais antigo não se pede, porque ligava sem perguntar. O painel redesenha-se a cada tecla: o resultado vai no estado
+  const versaoLigar = v => { const [a, b] = String(v).split(".").map(Number); return a > 4 || (a === 4 && b >= 72); };
   const TEXTO_LIGAR = {
+    "cancelado": "Chamada cancelada.",
     "a-ligar": "📞 A ligar pela Finesse…", "escrito": "✓ Número no teclado da Finesse",
     "sem-resposta": "A Finesse não está aberta neste Firefox", "indisponivel": "A Finesse não deixa fazer chamadas agora",
     "sem-teclado": "Não consegui abrir o teclado da Finesse", "nao-aceitou": "A Finesse não aceitou o número",
     "ocupado": "A Finesse ainda está a marcar o anterior", "sem-fim": "A Finesse não respondeu a tempo"
   };
   let aLigar = false;
-  async function ligarPelaFinesse(contacto) {
-    if (aLigar || !confirm(`Ligar para a ${contacto} pela Finesse?`)) return;
+  // pedido: "PSP"/"PM" (contacto do script) ou { numero } (só algarismos, "+" opcional)
+  async function ligarPelaFinesse(pedido) {
+    if (aLigar) return;
+    if (![...versoesVistas].some(versaoLigar)) {
+      avisar("Para ligar daqui o script Quartéis 112 tem de ser a versão 4.72 ou mais recente: instala a versão nova e F5.");
+      return;
+    }
     aLigar = true;
-    avisar(`📞 A pedir à Finesse para ligar para a ${contacto}…`);
+    avisar("📞 Confirma a chamada na pergunta do script…");
     try {
-      const r = await q112("ligar", contacto, 15000);
+      // espera mais: a pergunta do script fica aberta até o operador responder
+      const r = await q112("ligar", pedido, 120000);
       avisar(TEXTO_LIGAR[r] || "Finesse: " + r);
     } catch (e) {
-      avisar(/desconhecido/.test(e.message) ? "O script Quartéis 112 desta página é antigo (precisa da 4.71): instala a versão nova e F5"
+      avisar(/desconhecido|recusado/.test(e.message) ? "O script Quartéis 112 desta página é antigo (precisa da 4.72): instala a versão nova e F5"
         : "Não consegui ligar: " + e.message);
       console.warn("[Moradas 112] ligar:", e.message);
     } finally { aLigar = false; }
@@ -463,6 +472,8 @@ function dadosParaGoMAP() {
       if (t.digitos.length === 9) botao(el, fmtTel(t.digitos), "Pôr no Telefone do formulário do goMAP (sem formulário aberto, copia)", () => paraGoMAP([["oco_n_telefone", t.digitos]], t.digitos, "Telefone"));
       else botao(el, fmtTel(t.digitos), "Copiar o número (não tem 9 algarismos, não vai para o goMAP)", () => copiar(t.digitos, "Número copiado."));
       span(el, t.tipo + (t.de ? " · " + t.de : ""), "tipo");
+      // o script só liga para algarismos (com "+" à frente): os mesmos que o oncall manda à Finesse
+      if (/^\+?\d{3,31}$/.test(t.digitos)) botao(el, "📞 TELEFONAR REQUERENTE", `Ligar para ${fmtTel(t.digitos)} pela Cisco Finesse (tem de estar aberta neste Firefox)`, () => ligarPelaFinesse({ numero: t.digitos }));
     });
     secao("Numeração outras entidades", d.codu, (el, n) => botao(el, "CODU:" + n, "Pôr nas Ref. entidades do goMAP (sem formulário aberto, copia)", () => paraGoMAP([["oco_ref_entidades", "CODU:" + n]], "CODU:" + n, "CODU")));
     secao("Natureza", d.naturezas, (el, n) => {
