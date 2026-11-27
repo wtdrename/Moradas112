@@ -21,7 +21,8 @@ const notasBase = s => s.replace(/[\s\S]/g, c => c.normalize("NFD").replace(/[̀
 // A ordem é a prioridade: com várias nas notas, todas aparecem no painel, mas a que vai para o goMAP é a primeira desta lista
 // (por isso as mais específicas vêm antes: "acidente rodoviário com encarcerados" é Encarcerados, "cheiro a gás" é Fuga de gás).
 // "fonte" (o texto da opção do goMAP, que vai com a natureza) é opcional, como nas regras de cima.
-// "aviso" (opcional) aparece a vermelho no painel, ao lado da natureza.
+// "aviso" (opcional) aparece a vermelho no painel, ao lado da natureza; com "ligar" (o nome de um contacto do script
+// Quartéis 112, em CONTACTOS_LIGAR) o aviso é um botão que liga para esse contacto pela Finesse.
 const NATUREZAS_NOTAS = [
   { codigo: "2103", nome: "Encarcerados", palavras: ["encarcerados", "encarcerado", "encarcerada"] },
   { codigo: "2101", nome: "Atropelamento", palavras: ["atropelamento", "atropelado", "atropelada"] },
@@ -29,8 +30,8 @@ const NATUREZAS_NOTAS = [
   { codigo: "6301", nome: "Fuga de gás", palavras: ["fuga de gás", "gás"] },
   { codigo: "6401", nome: "Verificar fumos", palavras: ["fumos", "fumo", "verificar fumos"], fonte: "PUB" },
   { codigo: "6402", nome: "Verificar cheiros", palavras: ["cheiros", "cheiro", "verificar cheiros"], fonte: "PUB" },
-  { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta com socorro", "porta socorro"], fonte: "PUB", aviso: "CHAMAR PSP" },
-  { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"], fonte: "PUB", aviso: "CHAMAR PM" },
+  { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta com socorro", "porta socorro"], fonte: "PUB", aviso: "CHAMAR PSP", ligar: "PSP" },
+  { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"], fonte: "PUB", aviso: "CHAMAR PM", ligar: "PM" },
   { codigo: "2501", nome: "Elevador", palavras: ["elevador", "elevadores"], fonte: "PUB" },
   { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"], fonte: "RSBL" },
   { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"], fonte: "RSBL" },
@@ -211,7 +212,7 @@ function detetarNotas(texto) {
     if (g.natureza) r.naturezas.push({ codigo: g.natureza, nome: g.nome, fonte: g.fonte || "" });
   }
   for (const n of NATUREZAS_NOTAS) {
-    if (!r.naturezas.some(x => x.codigo === n.codigo) && naturezaNasNotas(base, n)) r.naturezas.push({ codigo: n.codigo, nome: n.nome, fonte: n.fonte || "", aviso: n.aviso || "" });
+    if (!r.naturezas.some(x => x.codigo === n.codigo) && naturezaNasNotas(base, n)) r.naturezas.push({ codigo: n.codigo, nome: n.nome, fonte: n.fonte || "", aviso: n.aviso || "", ligar: n.ligar || "" });
   }
   return r;
 }
@@ -421,6 +422,29 @@ function dadosParaGoMAP() {
     copiar(textoCopiar, nome + " copiado (" + porque + ").");
   }
 
+  // botão das naturezas com "ligar": o script Quartéis 112 liga pela Finesse para o contacto (o número está no script).
+  // Pergunta antes: um clique sem querer não liga a ninguém. O painel redesenha-se a cada tecla, por isso o resultado vai no estado
+  const TEXTO_LIGAR = {
+    "a-ligar": "📞 A ligar pela Finesse…", "escrito": "✓ Número no teclado da Finesse",
+    "sem-resposta": "A Finesse não está aberta neste Firefox", "indisponivel": "A Finesse não deixa fazer chamadas agora",
+    "sem-teclado": "Não consegui abrir o teclado da Finesse", "nao-aceitou": "A Finesse não aceitou o número",
+    "ocupado": "A Finesse ainda está a marcar o anterior", "sem-fim": "A Finesse não respondeu a tempo"
+  };
+  let aLigar = false;
+  async function ligarPelaFinesse(contacto) {
+    if (aLigar || !confirm(`Ligar para a ${contacto} pela Finesse?`)) return;
+    aLigar = true;
+    avisar(`📞 A pedir à Finesse para ligar para a ${contacto}…`);
+    try {
+      const r = await q112("ligar", contacto, 15000);
+      avisar(TEXTO_LIGAR[r] || "Finesse: " + r);
+    } catch (e) {
+      avisar(/desconhecido/.test(e.message) ? "O script Quartéis 112 desta página é antigo (precisa da 4.71): instala a versão nova e F5"
+        : "Não consegui ligar: " + e.message);
+      console.warn("[Moradas 112] ligar:", e.message);
+    } finally { aLigar = false; }
+  }
+
   function secao(titulo, itens, desenhar) {
     if (!itens.length) return;
     det.appendChild(Object.assign(document.createElement("div"), { className: "titulo", textContent: titulo }));
@@ -444,7 +468,12 @@ function dadosParaGoMAP() {
     secao("Natureza", d.naturezas, (el, n) => {
       botao(el, n.codigo, "Pôr a natureza no formulário do goMAP (substitui; sem formulário aberto, copia)", () => paraGoMAP([], n.codigo, "Natureza", n));
       span(el, n.nome + (d.naturezas.length > 1 && n === d.naturezas[0] ? " · vai para o goMAP" : ""), "tipo");
-      if (n.aviso) span(el, "⚠ " + n.aviso, "alerta");
+      if (n.ligar) {
+        const b = Object.assign(document.createElement("button"), { type: "button", className: "alerta", textContent: "📞 " + n.aviso,
+          title: `Ligar para a ${n.ligar} pela Cisco Finesse (tem de estar aberta neste Firefox)` });
+        b.onclick = () => ligarPelaFinesse(n.ligar);
+        el.appendChild(b);
+      } else if (n.aviso) span(el, "⚠ " + n.aviso, "alerta");
     });
     secao("Nome", d.nomes, (el, n) => botao(el, n, "Pôr no Nome do formulário do goMAP (sem formulário aberto, copia)", () => paraGoMAP([["oco_nome", n.slice(0, 50)]], n, "Nome")));
     secao("Morada referida", d.ruas, (el, rua) => {
