@@ -21,6 +21,7 @@ const notasBase = s => s.replace(/[\s\S]/g, c => c.normalize("NFD").replace(/[̀
 // A ordem é a prioridade: com várias nas notas, todas aparecem no painel, mas a que vai para o goMAP é a primeira desta lista
 // (por isso as mais específicas vêm antes: "acidente rodoviário com encarcerados" é Encarcerados, "cheiro a gás" é Fuga de gás).
 // "fonte" (o texto da opção do goMAP, que vai com a natureza) é opcional, como nas regras de cima.
+// "aviso" (opcional) aparece a vermelho no painel, ao lado da natureza.
 const NATUREZAS_NOTAS = [
   { codigo: "2103", nome: "Encarcerados", palavras: ["encarcerados", "encarcerado", "encarcerada"] },
   { codigo: "2101", nome: "Atropelamento", palavras: ["atropelamento", "atropelado", "atropelada"] },
@@ -28,8 +29,8 @@ const NATUREZAS_NOTAS = [
   { codigo: "6301", nome: "Fuga de gás", palavras: ["fuga de gás", "gás"] },
   { codigo: "6401", nome: "Verificar fumos", palavras: ["fumos", "fumo", "verificar fumos"], fonte: "PUB" },
   { codigo: "6402", nome: "Verificar cheiros", palavras: ["cheiros", "cheiro", "verificar cheiros"], fonte: "PUB" },
-  { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta com socorro", "porta socorro"], fonte: "PUB" },
-  { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"], fonte: "PUB" },
+  { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta com socorro", "porta socorro"], fonte: "PUB", aviso: "CHAMAR PSP" },
+  { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"], fonte: "PUB", aviso: "CHAMAR PM" },
   { codigo: "2501", nome: "Elevador", palavras: ["elevador", "elevadores"], fonte: "PUB" },
   { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"], fonte: "RSBL" },
   { codigo: "8720", nome: "Adesão teleassistência", palavras: ["adesão teleassistência", "teleassistência"], fonte: "RSBL" },
@@ -210,7 +211,7 @@ function detetarNotas(texto) {
     if (g.natureza) r.naturezas.push({ codigo: g.natureza, nome: g.nome, fonte: g.fonte || "" });
   }
   for (const n of NATUREZAS_NOTAS) {
-    if (!r.naturezas.some(x => x.codigo === n.codigo) && naturezaNasNotas(base, n)) r.naturezas.push({ codigo: n.codigo, nome: n.nome, fonte: n.fonte || "" });
+    if (!r.naturezas.some(x => x.codigo === n.codigo) && naturezaNasNotas(base, n)) r.naturezas.push({ codigo: n.codigo, nome: n.nome, fonte: n.fonte || "", aviso: n.aviso || "" });
   }
   return r;
 }
@@ -443,6 +444,7 @@ function dadosParaGoMAP() {
     secao("Natureza", d.naturezas, (el, n) => {
       botao(el, n.codigo, "Pôr a natureza no formulário do goMAP (substitui; sem formulário aberto, copia)", () => paraGoMAP([], n.codigo, "Natureza", n));
       span(el, n.nome + (d.naturezas.length > 1 && n === d.naturezas[0] ? " · vai para o goMAP" : ""), "tipo");
+      if (n.aviso) span(el, "⚠ " + n.aviso, "alerta");
     });
     secao("Nome", d.nomes, (el, n) => botao(el, n, "Pôr no Nome do formulário do goMAP (sem formulário aberto, copia)", () => paraGoMAP([["oco_nome", n.slice(0, 50)]], n, "Nome")));
     secao("Morada referida", d.ruas, (el, rua) => {
