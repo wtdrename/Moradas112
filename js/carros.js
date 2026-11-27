@@ -24,12 +24,17 @@ function titulo(el, texto) {
   el.appendChild(t);
 }
 
+// última resposta dos carros (para o separador Aproximações); só vale para a morada em c
+let ultimosCarros = null;
 function verCarros(c) {
+  if (ultimosCarros && ultimosCarros.c !== c) ultimosCarros = null;
   const el = $("rCarros");
   if (!c.quarteis || !c.quarteis.length) { el.textContent = ""; return; }
   q112("carros", { ponto: c.ponto, quarteis: c.quarteis, chefe: c.chefe || [] }, 30000).then(r => {
     if (candidatos[sel] !== c) return;
     const todos = r.todos;
+    ultimosCarros = { c, todos };
+    if (typeof atualizarAproximacoes === "function") atualizarAproximacoes();
     el.innerHTML = "";
 
     const daZona = todos.filter(x => x.doLocal);

@@ -28,7 +28,7 @@ const NATUREZAS_NOTAS = [
   { codigo: "6301", nome: "Fuga de gás", palavras: ["fuga de gás", "gás"] },
   { codigo: "6401", nome: "Verificar fumos", palavras: ["fumos", "fumo", "verificar fumos"], fonte: "PUB" },
   { codigo: "6402", nome: "Verificar cheiros", palavras: ["cheiros", "cheiro", "verificar cheiros"], fonte: "PUB" },
-  { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta com socorro", "porta socorro"] },
+  { codigo: "7401", nome: "Abertura de porta c/ socorro", palavras: ["abertura porta c/socorro", "porta com socorro", "porta socorro"], fonte: "PUB" },
   { codigo: "7402", nome: "Abertura de porta s/ socorro", palavras: ["abertura porta s/socorro", "porta sem socorro", "porta s/socorro"], fonte: "PUB" },
   { codigo: "2501", nome: "Elevador", palavras: ["elevador", "elevadores"], fonte: "PUB" },
   { codigo: "8711", nome: "Primeira avaliação", palavras: ["primeira avaliação"], fonte: "RSBL" },

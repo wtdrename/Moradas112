@@ -88,6 +88,7 @@ function desenharMapa(recentrar = true) {
   $("mapaStreet").href = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${ll}`;
   mapaLigacoes.hidden = false;
   atualizarGoogle();
+  if (typeof atualizarAproximacoes === "function") atualizarAproximacoes();
 }
 
 // separador Google Maps: o mesmo ponto (também o do pin arrastado), só para ver. Só carrega com o separador aberto.
@@ -177,6 +178,7 @@ function mapaEmEspera(msg) {
   mapaNota.textContent = msg || "";
   if (mapaFrame.hidden) { mapaVazio.hidden = false; mapaVazio.textContent = msg || "O mapa da morada aparece aqui."; }
   atualizarGoogle();
+  if (typeof apxSemMorada === "function") apxSemMorada();
 }
 
 function limparMapa() {
@@ -190,4 +192,5 @@ function limparMapa() {
   $("googleFrame").hidden = true;
   $("googleFrame").removeAttribute("src");
   $("googleVazio").hidden = false;
+  if (typeof apxSemMorada === "function") apxSemMorada();
 }
