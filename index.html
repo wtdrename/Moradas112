@@ -9,7 +9,7 @@
 <script>try { const t = localStorage.getItem("moradasTema"); if (t) document.documentElement.dataset.tema = t; } catch {}</script>
 <!-- Leaflet 1.9.4 -->
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="css/estilos.css?v=20261119e">
+<link rel="stylesheet" href="css/estilos.css?v=20261127c">
 </head>
 <body>
 <main>
@@ -116,6 +116,8 @@
     </div>
   </aside>
 </main>
+<!-- versão da página: a mais recente dos ?v= dos ficheiros (muda sozinha quando se sobe a versão de um deles) -->
+<footer id="versao"></footer>
 <!-- caminhos relativos: no GitHub Pages (/Moradas112/) ficam /Moradas112/ruas.js, /Moradas112/js/… -->
 <!-- a ordem conta: cada ficheiro só usa, ao carregar, o que vem nos de cima -->
 <!-- ?v=: muda-se a cada alteração, para o browser não ficar com os ficheiros antigos na cache -->
@@ -134,5 +136,12 @@
 <script src="js/pesquisa.js?v=20261119e"></script>
 <script src="js/arranque.js?v=20261119e"></script>
 <script src="js/notas.js?v=20261127a"></script>
+<script>
+(() => {
+  const v = [...document.querySelectorAll("script[src], link[href]")].map(e => (e.getAttribute("src") || e.getAttribute("href")).match(/[?&]v=(\d{8}[a-z]?)/))
+    .filter(Boolean).map(m => m[1]).sort().pop();
+  if (v) document.getElementById("versao").textContent = `Versão ${v.slice(6, 8)}/${v.slice(4, 6)}/${v.slice(0, 4)}${v.slice(8) && " " + v.slice(8)}`;
+})();
+</script>
 </body>
 </html>
