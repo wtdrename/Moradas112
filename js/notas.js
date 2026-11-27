@@ -449,6 +449,7 @@ function dadosParaGoMAP() {
       span(el, rua);
       botao(el, "🔍", "Pesquisar esta morada", () => {
         const caixa = document.getElementById("caixa");
+        moradaAuto = rua; // veio das notas: uma morada nova nas notas ainda a pode substituir
         caixa.value = rua; caixa.dispatchEvent(new Event("input")); caixa.focus();
       });
     });
@@ -475,7 +476,8 @@ function dadosParaGoMAP() {
   function abrirNota(id) {
     const n = historico.find(x => x.id === id); if (!n) return;
     gravarAtual(); atualId = id; guardar();
-    notas.value = n.texto; moradaAuto = ""; desenhar(); preencherLista(); notas.focus();
+    notas.value = n.texto; limparCaixa(); desenhar(); preencherLista(); notas.focus();
+    tAuto = setTimeout(moradaParaPesquisa, 700); // a morada da nota aberta vai para a caixa
     avisar("Aberta a nota das " + quandoTxt(n.inicio) + " — a que estava escrita ficou nas notas anteriores.");
   }
   lista.onchange = () => { const id = lista.value; lista.value = ""; if (id) abrirNota(id); };
@@ -495,11 +497,18 @@ function dadosParaGoMAP() {
   function limparTudo() {
     historico = []; atualId = novoId();
     guardar();
-    notas.value = ""; moradaAuto = ""; desenhar(); preencherLista();
+    notas.value = ""; limparCaixa(); desenhar(); preencherLista();
   }
   // a morada detetada nas notas vai logo para a caixa de pesquisa (0,7 s depois de parar de escrever, para não
   // pesquisar uma rua a meio, nem "heli" a meio de "helicóptero"). O cursor fica nas notas.
   let moradaAuto = "", tAuto;
+  // ao mudar de nota, a pesquisa da chamada anterior também sai, para a morada das notas poder ir para a caixa
+  // (o que lá ficasse contava como escrito à mão e não era substituído)
+  function limparCaixa() {
+    clearTimeout(tAuto); moradaAuto = "";
+    const caixa = document.getElementById("caixa");
+    caixa.value = ""; caixa.dispatchEvent(new Event("input"));
+  }
   function moradaParaPesquisa() {
     const caixa = document.getElementById("caixa");
     // a morada saiu das notas e a caixa já tem outra: se voltar a aparecer, volta a contar
@@ -544,6 +553,7 @@ function dadosParaGoMAP() {
     if (!notas.value.trim()) { notas.focus(); return; } // já está vazia
     gravarAtual(); atualId = novoId(); guardar();
     notas.value = ""; desenhar(); preencherLista(); notas.focus(); moradaAuto = "";
+    limparCaixa();
   };
   document.getElementById("notasApagar").onclick = () => {
     if (!notas.value.trim() && !historico.length) { avisar("Não há notas para apagar."); return; }
