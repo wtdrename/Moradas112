@@ -254,7 +254,12 @@
         .bindTooltip(q.nome, { direction: "right", offset: [8, 0] }).addTo(camadaQuarteis);
     });
     if (pinoApx) pinoApx.remove();
-    pinoApx = L.marker([calc.lat, calc.lng], { keyboard: false, interactive: false, icon: L.divIcon({ className: "pino", html: PINO_SVG, iconSize: [30, 45], iconAnchor: [15, 45] }) }).addTo(mapa);
+    pinoApx = L.marker([calc.lat, calc.lng], {
+      draggable: true, autoPan: true, keyboard: false, title: "Arrasta para acertar o local",
+      icon: L.divIcon({ className: "pino", html: PINO_SVG, iconSize: [30, 45], iconAnchor: [15, 45] })
+    }).addTo(mapa);
+    // largado aqui é como no mapa da morada: pinoMovido (mapa.js) muda o ponto, o pin do outro mapa e volta a chamar o cálculo
+    pinoApx.on("dragend", () => pinoMovido(pinoApx.getLatLng()));
     desenharPercursos();
   }
 
@@ -319,6 +324,7 @@
       desenharMapa();
     }
     if (calc.no < 0) return;
+    if (pinoApx) pinoApx.dragging.enable(); // voltou a mesma morada (sem novo cálculo): o pin volta a arrastar-se
     mostrarEstado("");
     $("apxNota").textContent = `Tempos estimados pelas velocidades médias por tipo de via (OSM); até ao ponto de rua a ${Math.round(calc.d)} m.`;
     desenharTabela();
@@ -327,6 +333,7 @@
   // sem morada localizada (a procurar outra, ou limpa): o painel fica esbatido com a mensagem
   function apxSemMorada() {
     seq++;
+    if (pinoApx) pinoApx.dragging.disable(); // como no mapa da morada: sem morada não se arrasta
     const painel = $("painelAproximacoes");
     painel.classList.add("velho");
     if (!painel.hidden) mostrarEstado("Sem morada localizada: escreve uma morada para ver as aproximações.");
