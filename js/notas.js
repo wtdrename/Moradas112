@@ -36,6 +36,10 @@ const NATUREZAS_NOTAS = [
   { codigo: "8700", nome: "Assistência à população", palavras: ["assistência à população", "assistência população", "apoio"], fonte: "PUB" },
   { codigo: "7703", nome: "Auxílio transporte", palavras: ["auxílio transporte", "auxílio ao transporte", "auxílio de transporte"], fonte: "PUB" },
   { codigo: "3100", nome: "Queda de árvore", palavras: ["queda de árvore", "queda árvore", "árvore caída"], fonte: "PUB" },
+  { codigo: "3502", nome: "Inundação espaço público", palavras: ["inundação espaço público", "inundação em espaço público", "inundação na via pública",
+    "inundação via pública", "inundação pública"] },
+  { codigo: "3501", nome: "Inundação espaço privado", palavras: ["inundação espaço privado", "inundação em espaço privado", "inundação privada",
+    "inundação em habitação", "inundação habitação"] },
   { codigo: "3301", nome: "Queda de revestimento", palavras: ["queda de revestimento", "queda revestimento"], fonte: "PUB" },
   { codigo: "7201", nome: "Sinalizar buraco", palavras: ["sinalizar buraco", "buraco"], fonte: "PUB" },
   { codigo: "7500", nome: "Fecho de Água", palavras: ["fecho de água", "fecho água", "fechar água", "fecho de agua", "fecho agua"], fonte: "PUB" },
@@ -197,7 +201,7 @@ function detetarNotas(texto) {
       if (/^\d+[a-z]?$/.test(pal[n - 1])) break; // o número da porta fecha a rua
     }
     const escrita = orig.slice(0, n).join(" ").replace(/[.\s]+$/, "");
-    const rua = n > 1 ? ruaDaLinha(escrita) || escrita : ""; // o nome oficial, se estiver na lista de ruas
+    const rua = n > 1 ? ruaDaLinha(escrita) || escrita.replace(/(?<=\s)(?:n\.?\s*º?|nr\.?|n[uú]mero)\s*(?=\d)/gi, "") : ""; // o nome oficial, se estiver na lista de ruas
     if (rua && !r.ruas.includes(rua)) r.ruas.push(rua);
   }
 
@@ -281,7 +285,8 @@ function ruaDaLinha(linha) {
   return r;
 }
 function ruaDaLinhaCalc(linha) {
-  const pal = semAcentos(linha).split(" ").filter(Boolean);
+  // "n49", "nº 49", "n.º49", "nr 49", "número 49": fica só o número da porta
+  const pal = semAcentos(linha).replace(/(?<=\S\s)(?:n|nr|num|numero)\s*(?=\d)/g, "").split(" ").filter(Boolean);
   const i = pal.findIndex((p, k) => k > 0 && /^\d+[a-z]?$/.test(p));
   const q = partes(i > 0 ? pal.slice(0, i) : pal);
   if (q.nucleo.replace(/[\s\d]/g, "").length < 4) return "";
