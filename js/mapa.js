@@ -10,13 +10,38 @@ function criarMapa() {
   if (mapaL) return;
   mapaL = L.map(mapaFrame).setView([mapaPonto.lat, mapaPonto.lng], 18);
   const camada = L.tileLayer(MAPA_BASE, { minZoom: 11, maxZoom: 21, maxNativeZoom: 20, attribution: "CM Lisboa" }).addTo(mapaL);
-  // Um quadrado que falha fica cinzento até se mudar o zoom (o Leaflet não o volta a pedir, nem ao arrastar o mapa):
-  // pede-se outra vez, até 3 vezes, cada vez com mais espera
-  camada.on("tileerror", ({ tile, coords }) => {
+  // Quadrados que falham (erro ou sem resposta): o Leaflet não os volta a pedir e dá-os como carregados, por isso ao fazer
+  // zoom in tira o quadrado ampliado do zoom de baixo e fica um buraco cinzento. Aqui: pede-se outra vez (até 5 vezes, cada vez
+  // com mais espera), o do zoom de baixo fica à vista enquanto este não chega, e ao mexer no mapa voltam a pedir-se os desistidos
+  const carregado = tile => tile.classList.contains("leaflet-tile-loaded");
+  const pedir = (tile, coords, n) => { if (tile.isConnected && !carregado(tile)) tile.src = camada.getTileUrl(coords) + "?tentativa=" + n; };
+  function tentarOutraVez(tile, coords) {
     const n = (Number(tile.dataset.tentativas) || 0) + 1;
-    if (n > 3) { console.warn("[Moradas 112] mapa: quadrado sem resposta depois de 3 tentativas", coords); return; }
+    if (n > 5) { tile.dataset.desistiu = "1"; console.warn("[Moradas 112] mapa: quadrado sem resposta depois de 5 tentativas", coords); return; }
     tile.dataset.tentativas = n;
-    setTimeout(() => { if (tile.isConnected) tile.src = camada.getTileUrl(coords) + "?tentativa=" + n; }, 700 * n);
+    setTimeout(() => pedir(tile, coords, n), 700 * n);
+  }
+  camada.on("tileerror", ({ tile, coords }) => {
+    tentarOutraVez(tile, coords);
+    // logo a seguir a este aviso o Leaflet marca-o como carregado: volta a "por carregar" (com opacidade 0, já posta pelo
+    // Leaflet), para o quadrado do zoom de baixo não ser tirado
+    const k = camada._tileCoordsToKey(coords);
+    setTimeout(() => { const t = camada._tiles[k]; if (t && t.el === tile && !carregado(tile)) { t.loaded = 0; t.active = false; } });
+  });
+  // sem resposta ao fim de 8 s (o pedido ficou pendurado): pede-se outra vez
+  camada.on("tileloadstart", ({ tile, coords }) => {
+    const vigiar = (src = tile.src) => setTimeout(() => {
+      if (!tile.isConnected || carregado(tile) || tile.dataset.desistiu) return;
+      // o mesmo pedido continua por responder (outro pedido entretanto tem a sua própria espera)
+      if (tile.src === src && !tile.complete) tentarOutraVez(tile, coords);
+      vigiar();
+    }, 8000);
+    vigiar();
+  });
+  mapaL.on("moveend", () => {
+    for (const t of Object.values(camada._tiles)) if (t.el.dataset.desistiu && !carregado(t.el)) {
+      delete t.el.dataset.desistiu; t.el.dataset.tentativas = 0; tentarOutraVez(t.el, t.coords);
+    }
   });
   pino = L.marker([mapaPonto.lat, mapaPonto.lng], {
     draggable: true, autoPan: true, keyboard: false, title: "Arrasta para acertar o local",
