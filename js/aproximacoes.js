@@ -165,8 +165,34 @@
 
   // ---------- cálculo ----------
 
-  let calc = null;            // { lat, lng, no, d, lista } do último cálculo
+  let calc = null;            // { lat, lng, no, d, todos (todos os quartéis, do mais rápido), area } do último cálculo
   let visiveis = new Set();   // quartéis (índice) com o percurso desenhado
+  let areaVista;              // a lista de quartéis da área (c.quarteis) já aplicada a este cálculo
+
+  // quartéis (índice) da área da morada, pelos nomes que mostrarAreas guardou em c.quarteis (vazio = ainda sem área)
+  function quarteisDaArea(nomes) {
+    const area = new Set();
+    for (const nome of nomes || []) {
+      const a = semAcentos(nome);
+      QUARTEIS.forEach((q, k) => { const b = semAcentos(q.nome); if (a.includes(b) || b.includes(a)) area.add(k); });
+    }
+    return area;
+  }
+
+  // percursos que se veem ao chegar a área: o do quartel da área (cheio) e o do mais rápido, se for outro (tracejado)
+  function aplicarArea(nomes) {
+    areaVista = nomes;
+    calc.area = quarteisDaArea(nomes);
+    const rapido = calc.todos.find(x => x.pts.length);
+    visiveis = new Set([...calc.area, ...(rapido ? [rapido.k] : [])].filter(k => calc.todos.some(x => x.k === k && x.pts.length)));
+  }
+
+  // linhas da tabela: os mais rápidos e, se não estiver entre eles, o quartel da área
+  function linhas() {
+    const l = calc.todos.slice(0, MOSTRAR);
+    for (const x of calc.todos) if (calc.area.has(x.k) && !l.includes(x)) l.push(x);
+    return l;
+  }
 
   function percurso(seguinte, no) {
     const nos = [];
@@ -176,9 +202,9 @@
 
   function calcular(lat, lng) {
     const no = pertoNoIndice(g, ind, lat, lng, 300);
-    if (no < 0) return { lat, lng, no, lista: [] };
+    if (no < 0) return { lat, lng, no, todos: [], area: new Set() };
     const { tempo, seguinte } = dijkstra(g, no, origens.map(o => o.no));
-    const lista = QUARTEIS.map((q, k) => {
+    const todos = QUARTEIS.map((q, k) => {
       const t = tempo[origens[k].no];
       let pts = [], km = NaN;
       if (isFinite(t)) {
@@ -188,8 +214,8 @@
         km = m / 1000;
       }
       return { k, q, t, km, pts };
-    }).sort((a, b) => a.t - b.t).slice(0, MOSTRAR);
-    return { lat, lng, no, d: metros(lat, lng, g.lat[no], g.lng[no]), lista };
+    }).sort((a, b) => a.t - b.t);
+    return { lat, lng, no, d: metros(lat, lng, g.lat[no], g.lng[no]), todos, area: new Set() };
   }
 
   // ---------- viaturas disponíveis de cada quartel (da última resposta de verCarros) ----------
@@ -231,9 +257,10 @@
   function desenharPercursos() {
     camadaPercursos.clearLayers();
     const pontos = [[calc.lat, calc.lng]];
-    calc.lista.forEach((x, pos) => {
-      if (!visiveis.has(x.k) || !x.pts.length) return;
-      const cor = CORES[x.k], tracejado = pos > 0;
+    // cheio: o quartel da área (sem área conhecida, o mais rápido); os outros a tracejado e por baixo
+    const cheio = x => calc.area.size ? calc.area.has(x.k) : x === calc.todos[0];
+    calc.todos.filter(x => visiveis.has(x.k) && x.pts.length).sort((a, b) => cheio(a) - cheio(b)).forEach(x => {
+      const cor = CORES[x.k], tracejado = !cheio(x);
       L.polyline(x.pts, { color: "#fff", weight: 8, opacity: 0.9, interactive: false }).addTo(camadaPercursos);
       L.polyline(x.pts, { color: cor, weight: 5, dashArray: tracejado ? "10 8" : null, interactive: false }).addTo(camadaPercursos);
       // do quartel à rua e da rua à morada, a direito
@@ -268,7 +295,7 @@
   function desenharTabela() {
     const corpo = $("apxCorpo");
     corpo.innerHTML = "";
-    for (const x of calc.lista) {
+    for (const x of linhas()) {
       const tr = document.createElement("tr"), viat = viaturasDe(x.q.nome);
       tr.className = "apx-linha" + (visiveis.has(x.k) ? " visto" : "");
       tr.title = "Mostrar / esconder o percurso";
@@ -277,6 +304,7 @@
       cor.style.background = CORES[x.k];
       const nome = document.createElement("td");
       nome.append(cor, x.q.nome); // texto, nunca HTML
+      if (calc.area.has(x.k)) nome.append(Object.assign(document.createElement("span"), { className: "apx-area", textContent: "área" }));
       const outras = [minutos(x.t), isFinite(x.km) ? x.km.toFixed(1).replace(".", ",") + " km" : "—",
         viat === null ? "…" : viat.length ? viat.join(", ") : "nenhuma"].map(txt => Object.assign(document.createElement("td"), { textContent: txt }));
       outras[0].className = outras[1].className = "apx-num";
@@ -315,7 +343,7 @@
       await pausa();
       if (meu !== seq) return;
       calc = calcular(lat, lng);
-      visiveis = new Set(calc.lista.length ? [calc.lista[0].k] : []);
+      aplicarArea(candidatos[sel] && candidatos[sel].quarteis);
       if (calc.no < 0) {
         mostrarEstado("Sem ruas a menos de 300 m desta morada: não dá para calcular por estrada.", true);
         $("apxCorpo").innerHTML = "";
@@ -324,6 +352,9 @@
       desenharMapa();
     }
     if (calc.no < 0) return;
+    // a área chegou (ou mudou, com o pin arrastado) depois do cálculo: refaz os percursos visíveis
+    const nomes = candidatos[sel] && candidatos[sel].quarteis;
+    if (nomes !== areaVista) { aplicarArea(nomes); desenharPercursos(); }
     if (pinoApx) pinoApx.dragging.enable(); // voltou a mesma morada (sem novo cálculo): o pin volta a arrastar-se
     mostrarEstado("");
     $("apxNota").textContent = `Tempos estimados pelas velocidades médias por tipo de via (OSM); até ao ponto de rua a ${Math.round(calc.d)} m.`;

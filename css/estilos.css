@@ -84,6 +84,7 @@ main { position: relative; }
 .apx-linha:hover { background: var(--sel); }
 .apx-linha.visto { background: var(--sel); font-weight: 600; }
 .apx-cor { display: inline-block; width: 11px; height: 11px; margin-right: 7px; border-radius: 50%; border: 1px solid var(--borda); vertical-align: -1px; }
+.apx-area { margin-left: 6px; padding: 0 5px; font-size: 11px; font-weight: 600; border: 1px solid var(--borda); border-radius: 4px; color: var(--suave); }
 #apxNota { margin-top: 6px; font-size: 13px; color: var(--suave); }
 #mapaRepor { padding: 0 8px; font-size: 13px; }
 #rMoradaNota { margin-bottom: 6px; color: var(--suave); font-size: 14px; }
