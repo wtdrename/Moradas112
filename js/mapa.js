@@ -15,7 +15,27 @@ function criarMapa() {
   // com mais espera), o do zoom de baixo fica à vista enquanto este não chega, e ao mexer no mapa voltam a pedir-se os desistidos
   const carregado = tile => tile.classList.contains("leaflet-tile-loaded");
   const pedir = (tile, coords, n) => { if (tile.isConnected && !carregado(tile)) tile.src = camada.getTileUrl(coords) + "?tentativa=" + n; };
+  // O servidor do mapa está na rede interna da Câmara: o browser só deixa a página (no GitHub) chegar lá com a autorização
+  // "acesso à rede local". Enquanto essa caixa está aberta, cada pedido novo redesenha-a e apaga o que lá estava, por isso
+  // até haver acesso (um quadrado que chegou, ou a autorização dada) não se volta a pedir nada sozinho; com acesso, pedem-se
+  // logo outra vez todos os que faltam
+  let acesso = false;
+  function haAcesso() {
+    if (acesso) return;
+    acesso = true;
+    for (const t of Object.values(camada._tiles)) if (!carregado(t.el)) {
+      delete t.el.dataset.desistiu; delete t.el.dataset.espera; t.el.dataset.tentativas = 0; pedir(t.el, t.coords, 0);
+    }
+  }
+  camada.on("tileload", haAcesso);
+  if (navigator.permissions) for (const name of ["local-network-access", "local-network"]) {
+    navigator.permissions.query({ name }).then(p => {
+      if (p.state === "granted") haAcesso();
+      p.addEventListener("change", () => { if (p.state === "granted") haAcesso(); });
+    }).catch(() => {}); // este browser não tem esta permissão
+  }
   function tentarOutraVez(tile, coords) {
+    if (!acesso) { tile.dataset.espera = "1"; return; }
     const n = (Number(tile.dataset.tentativas) || 0) + 1;
     if (n > 5) { tile.dataset.desistiu = "1"; console.warn("[Moradas 112] mapa: quadrado sem resposta depois de 5 tentativas", coords); return; }
     tile.dataset.tentativas = n;
@@ -31,7 +51,7 @@ function criarMapa() {
   // sem resposta ao fim de 8 s (o pedido ficou pendurado): pede-se outra vez
   camada.on("tileloadstart", ({ tile, coords }) => {
     const vigiar = (src = tile.src) => setTimeout(() => {
-      if (!tile.isConnected || carregado(tile) || tile.dataset.desistiu) return;
+      if (!tile.isConnected || carregado(tile) || tile.dataset.desistiu || tile.dataset.espera) return;
       // o mesmo pedido continua por responder (outro pedido entretanto tem a sua própria espera)
       if (tile.src === src && !tile.complete) tentarOutraVez(tile, coords);
       vigiar();
@@ -39,7 +59,7 @@ function criarMapa() {
     vigiar();
   });
   mapaL.on("moveend", () => {
-    for (const t of Object.values(camada._tiles)) if (t.el.dataset.desistiu && !carregado(t.el)) {
+    if (acesso) for (const t of Object.values(camada._tiles)) if (t.el.dataset.desistiu && !carregado(t.el)) {
       delete t.el.dataset.desistiu; t.el.dataset.tentativas = 0; tentarOutraVez(t.el, t.coords);
     }
   });
